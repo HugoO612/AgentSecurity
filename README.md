@@ -13,7 +13,7 @@ Current formal scope:
 - The agent runs in a dedicated isolated environment.
 - The bridge is the only entry for high-risk local actions.
 - The product does not directly install the agent into Windows host runtime.
-- If the dedicated distro is missing, installer guidance is shown and handling is controlled by the installer flow.
+- If the dedicated distro is missing, the formal installer automatically prepares it.
 
 ## Core Scripts
 
@@ -26,8 +26,8 @@ Current formal scope:
 
 ## Formal Docs
 
-- [Formal Install Guide](A:\AgentSecurity\docs\install-guide.md)
-- [FAQ](A:\AgentSecurity\docs\faq.md)
-- [Uninstall Guide](A:\AgentSecurity\docs\uninstall.md)
-- [Support Process](A:\AgentSecurity\docs\support-process.md)
-- [Release Checklist](A:\AgentSecurity\docs\release-checklist.md)
+- [Formal Install Guide](docs/install-guide.md)
+- [FAQ](docs/faq.md)
+- [Uninstall Guide](docs/uninstall.md)
+- [Support Process](docs/support-process.md)
+- [Release Checklist](docs/release-checklist.md)

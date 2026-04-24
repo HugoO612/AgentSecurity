@@ -22,7 +22,7 @@
 
 - Collects system facts.
 - Enables required features when needed.
-- Prepares dedicated isolated runtime.
+- Automatically prepares dedicated isolated runtime and distro when missing.
 - Installs agent and writes runtime config.
 - Starts runtime and runs initial health check.
 - Emits install summary and reports.

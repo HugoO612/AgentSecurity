@@ -2,11 +2,9 @@ import { useNavigate } from 'react-router-dom'
 import { copy } from '../../copy'
 import { PageScaffold } from '../../components/PageScaffold'
 import { StatusBadge } from '../../components/StatusBadge'
-import { useUiState } from '../../ui/ui-store'
 
 export function EntryPage() {
   const navigate = useNavigate()
-  const { pushNotice } = useUiState()
 
   return (
     <PageScaffold
@@ -52,24 +50,6 @@ export function EntryPage() {
               onClick={() => navigate('/preinstall')}
             >
               {copy('COPY_BTN_CHOOSE_LOCAL')}
-            </button>
-          </div>
-        </article>
-        <article className="option-card">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">{copy('COPY_ENTRY_FALLBACK_TITLE')}</p>
-              <h3>{copy('COPY_ENTRY_CLOUD_TITLE')}</h3>
-            </div>
-          </div>
-          <p>{copy('COPY_ENTRY_CLOUD_DESC')}</p>
-          <div className="action-row">
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => pushNotice(copy('COPY_HINT_CLOUD_PLACEHOLDER'))}
-            >
-              {copy('COPY_BTN_VIEW_CLOUD')}
             </button>
           </div>
         </article>

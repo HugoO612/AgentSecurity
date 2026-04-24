@@ -227,7 +227,7 @@ async function checkDedicatedDistro(targetDistro: string): Promise<DistroStatus>
     const result = await runAllowedCommand('wsl.exe', ['-l', '-q'])
     const distros = result.stdout
       .split(/\r?\n/)
-      .map((entry) => entry.replace(/\u0000/g, '').trim())
+      .map((entry) => entry.replaceAll('\u0000', '').trim())
       .filter(Boolean)
     return {
       exists: distros.includes(targetDistro),

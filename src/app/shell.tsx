@@ -97,7 +97,7 @@ export function AppShell() {
           </button>
         ) : null}
       </header>
-      {clientDiagnostics.mode === 'mock-fallback' ? (
+      {showDebugUi && clientDiagnostics.mode === 'mock-fallback' ? (
         <div className="notice-banner notice-banner--warning">
           {copy('COPY_NOTICE_BRIDGE_FALLBACK')}
         </div>

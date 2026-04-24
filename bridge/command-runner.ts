@@ -276,7 +276,7 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
       validate: (result) => {
         const distros = result.stdout
           .split(/\r?\n/)
-          .map((entry) => entry.replace(/\u0000/g, '').trim())
+          .map((entry) => entry.replaceAll('\u0000', '').trim())
           .filter(Boolean)
         return distros.includes(targetDistro)
           ? { ok: true }
@@ -878,5 +878,5 @@ function windowsPathToWslPath(value: string) {
 }
 
 function escapeShellSingleQuoted(value: string) {
-  return value.replace(/'/g, `'\"'\"'`)
+  return value.replace(/'/g, `'"'"'`)
 }

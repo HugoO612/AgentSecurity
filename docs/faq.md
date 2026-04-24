@@ -8,6 +8,10 @@ The agent runs in a dedicated isolated runtime, not directly in Windows host run
 
 Only controlled product directories for data, runtime, diagnostics, and reports.
 
+## What if the dedicated distro is missing?
+
+The formal installer automatically prepares the dedicated `AgentSecurity` distro. No manual distro creation is required.
+
 ## Can I recover from failures?
 
 Yes. Recovery center provides stable actions:

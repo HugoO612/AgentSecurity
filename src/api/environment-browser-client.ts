@@ -270,7 +270,7 @@ function setMockFallbackDiagnostics(
     retryable: true,
   }
   diagnostics.diagnosticsSummary = createLocalDiagnosticsSummary({
-    conclusion: '当前未连接到本地 bridge，页面已回退到演示数据。',
+    conclusion: '当前无法连接本地安全组件。',
     recommendedNextStep: '启动本地 bridge 后重试连接。',
     retryable: true,
     code: 'bridge_unavailable',
