@@ -1,0 +1,103 @@
+{
+  "runAt": "2026-04-24T10:52:05.441Z",
+  "machine": "墨盒",
+  "mode": "real-machine-controlled-rehearsal",
+  "shimmedCommands": [
+    "enable_wsl_optional_features",
+    "install_wsl_kernel_or_update",
+    "check_reboot_pending",
+    "create_distro",
+    "seed_distro_base",
+    "install_agent",
+    "start_agent",
+    "stop_agent",
+    "health_check",
+    "delete_environment_files (unregister skipped)",
+    "delete_verification"
+  ],
+  "targetDistro": "Ubuntu",
+  "lifecycle": [
+    {
+      "action": "install",
+      "beforeState": "not-installed",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "ready"
+    },
+    {
+      "action": "start_agent",
+      "beforeState": "ready",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "finalizing",
+      "afterState": "running"
+    },
+    {
+      "action": "stop_agent",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "finalizing",
+      "afterState": "stopped"
+    },
+    {
+      "action": "restart_agent",
+      "beforeState": "stopped",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "finalizing",
+      "afterState": "running"
+    },
+    {
+      "action": "rebuild_environment",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "ready"
+    },
+    {
+      "action": "delete_environment",
+      "beforeState": "ready",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "not-installed"
+    }
+  ],
+  "failurePaths": [
+    {
+      "case": "invalid_token",
+      "status": 401,
+      "code": "invalid_token"
+    },
+    {
+      "case": "origin_forbidden",
+      "status": 403,
+      "code": "origin_not_allowed"
+    },
+    {
+      "case": "generation_conflict",
+      "status": 409,
+      "code": "generation_conflict"
+    },
+    {
+      "case": "confirm_token_missing",
+      "status": 409,
+      "code": "confirm_token_invalid"
+    }
+  ],
+  "reportStatus": {
+    "environment": 200,
+    "boundary": 200,
+    "deleteLast": 200,
+    "supportBundle": 200
+  },
+  "supportBundleChecks": {
+    "containsBridgeToken": false,
+    "containsLocalAppDataPath": false,
+    "containsAuthorizationHeader": false,
+    "containsRedactedMarkers": true
+  }
+}

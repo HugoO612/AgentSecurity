@@ -167,6 +167,7 @@ const ACTION_TEMPLATE_TABLE: Record<TemplatedAction, readonly TemplateCommandId[
     'check_windows_capabilities',
     'check_wsl2',
     'enable_wsl_optional_features',
+    'install_wsl_kernel_or_update',
     'check_reboot_pending',
     'create_distro',
     'seed_distro_base',
@@ -181,6 +182,7 @@ const ACTION_TEMPLATE_TABLE: Record<TemplatedAction, readonly TemplateCommandId[
   install_environment: [
     'check_windows_capabilities',
     'check_wsl2',
+    'install_wsl_kernel_or_update',
     'create_distro',
     'seed_distro_base',
     'download_installer',
@@ -194,6 +196,7 @@ const ACTION_TEMPLATE_TABLE: Record<TemplatedAction, readonly TemplateCommandId[
   retry_install: [
     'check_windows_capabilities',
     'check_wsl2',
+    'install_wsl_kernel_or_update',
     'check_distro',
     'download_installer',
     'verify_checksum',
