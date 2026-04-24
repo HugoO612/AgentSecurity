@@ -8,6 +8,11 @@ import {
   DEFAULT_ENVIRONMENT_ID,
   type BridgeConfig,
 } from './config.ts'
+import {
+  buildBoundarySelfCheckReport,
+  buildDeleteResultReport,
+  buildEnvironmentReport,
+} from './report-builder.ts'
 
 export function createInitialSnapshot(
   config: BridgeConfig,
@@ -25,9 +30,15 @@ export function createInitialSnapshot(
     runtime: {
       location: 'wsl2',
       processState: 'stopped',
-      distroName: 'AgentSecurity',
+      distroName: config.targetDistro,
       agentName: 'OpenClaw',
-      agentVersion: '0.1.0',
+      agentVersion: '1.0.0',
+      installationLocationSummary: `agent 将安装到专用隔离环境 ${config.targetDistro} 中。`,
+      windowsHostWritesSummary: `Windows 主环境只会写入受控目录：${config.dataRoot}、${config.runtimeDir}、${config.diagnosticsDir}。`,
+      isolationBoundarySummary: 'agent 默认仅在 WSL2 专用隔离环境中运行，不直接跑在 Windows 主环境。',
+      hostImpactConfirmed: true,
+      bridgeControlledActionsOnly: true,
+      targetDistroKind: 'dedicated',
     },
     checks: [],
     health: {
@@ -37,7 +48,7 @@ export function createInitialSnapshot(
     },
     capabilities: {
       canRunPrecheck: true,
-      canInstall: false,
+      canInstall: true,
       canRetry: false,
       canStart: false,
       canStop: false,
@@ -47,7 +58,34 @@ export function createInitialSnapshot(
       canRequestPermission: true,
     },
     actionLocks: [],
-    diagnostics: emptyDiagnostics(config.port),
+    commandAudits: [],
+    diagnostics: emptyDiagnostics(config),
+    deleteSummary: {
+      deletedItems: [],
+      remainingItems: [],
+      windowsHostResidualSummary: `Windows 主环境保留受控数据目录：${config.dataRoot}。`,
+    },
+    security: {
+      boundarySelfCheck: '边界自检尚未执行。',
+      bridgeControlStatus: '高风险动作仅能通过 bridge 入口处理。',
+    },
+    recovery: {
+      recommendedAction: undefined,
+      availableActions: ['export_support_bundle'],
+      estimatedDuration: {},
+      dataImpactSummary: {},
+      hostImpactSummary: {},
+      supportBundleAvailable: true,
+      actionDisabledReason: {
+        retry: '当前没有可重试的失败。',
+        rebuild: '当前尚未创建隔离环境。',
+        delete: '当前尚未创建隔离环境。',
+      },
+    },
+    report: {
+      environmentReportAvailable: true,
+      supportBundleAvailable: true,
+    },
   }
 
   return withDiagnostics(snapshot, config)
@@ -57,47 +95,82 @@ export function withDiagnostics(
   snapshot: EnvironmentSnapshot,
   config: BridgeConfig,
 ): EnvironmentSnapshot {
+  const environmentReport = buildEnvironmentReport(snapshot, {
+    mode: config.mode,
+    bridgeOrigin: config.bridgeOrigin,
+    runtimeDir: config.runtimeDir,
+    diagnosticsDir: config.diagnosticsDir,
+    dataDir: config.dataRoot,
+    targetDistro: config.targetDistro,
+  })
+  const boundary = buildBoundarySelfCheckReport(snapshot, {
+    mode: config.mode,
+    bridgeOrigin: config.bridgeOrigin,
+    runtimeDir: config.runtimeDir,
+    diagnosticsDir: config.diagnosticsDir,
+    dataDir: config.dataRoot,
+    targetDistro: config.targetDistro,
+  })
+  const deleteResult = buildDeleteResultReport(snapshot)
+
   return {
     ...snapshot,
-    diagnostics: buildDiagnostics(snapshot, config.port),
+    diagnostics: buildDiagnostics(snapshot, config),
+    report: {
+      environmentReportAvailable: true,
+      supportBundleAvailable: true,
+      environment: environmentReport,
+      boundary,
+      deleteResult,
+    },
+    security: {
+      boundarySelfCheck: boundary.summary,
+      bridgeControlStatus: boundary.bridgeControlStatus,
+    },
   }
 }
 
-export function emptyDiagnostics(port: number): DiagnosticsSummary {
+export function emptyDiagnostics(config: BridgeConfig): DiagnosticsSummary {
   return {
     userSummary: {
-      conclusion: '当前尚未安装本地隔离环境。',
-      recommendedNextStep: '先执行预检。',
+      conclusion: '当前尚未安装正式本地隔离环境。',
+      recommendedNextStep: '开始安装以准备本地隔离环境。',
       retryable: true,
     },
     supportSummary: {
       bridgeVersion: BRIDGE_VERSION,
-      port,
+      port: config.port,
       generation: 0,
       runtimeLocation: 'wsl2',
+      mode: config.mode,
+      isMock: false,
+      recentCommands: [],
     },
   }
 }
 
 export function buildDiagnostics(
   snapshot: EnvironmentSnapshot,
-  port: number,
+  config: BridgeConfig,
 ): DiagnosticsSummary {
   return {
     userSummary: {
       conclusion:
         snapshot.failure?.message ??
         (snapshot.installation.state === 'not-installed'
-          ? '当前尚未安装本地隔离环境。'
+          ? '当前尚未安装正式本地隔离环境。'
           : '当前运行环境状态正常。'),
-      recommendedNextStep: describeNextStep(snapshot.failure),
+      recommendedNextStep: describeNextStep(snapshot.failure, snapshot),
       retryable: snapshot.failure?.retryable ?? false,
     },
     supportSummary: {
       bridgeVersion: BRIDGE_VERSION,
-      port,
+      port: config.port,
       generation: snapshot.generation,
       runtimeLocation: snapshot.runtime.location,
+      mode: config.mode,
+      isMock: false,
+      recentCommands: snapshot.commandAudits?.slice(-10) ?? [],
       ...(snapshot.activeOperation
         ? {
             lastOperation: {
@@ -127,7 +200,27 @@ export function buildDiagnostics(
   }
 }
 
-function describeNextStep(failure?: FailureSnapshot) {
+function describeNextStep(
+  failure: FailureSnapshot | undefined,
+  snapshot: EnvironmentSnapshot,
+) {
+  const suggested = snapshot.recovery?.recommendedAction
+  if (suggested === 'retry') {
+    return '优先重试，不改动现有隔离环境。'
+  }
+  if (suggested === 'rebuild') {
+    return '建议重建隔离环境。'
+  }
+  if (suggested === 'delete') {
+    return '如不再需要，可删除本地隔离环境。'
+  }
+  if (suggested === 'go_fix') {
+    return '先根据修复提示处理阻塞项。'
+  }
+  if (suggested === 'contact_support') {
+    return '导出诊断包并联系支持。'
+  }
+
   switch (failure?.suggestedRecovery) {
     case 'retry':
       return '重试当前动作。'
@@ -140,8 +233,10 @@ function describeNextStep(failure?: FailureSnapshot) {
     case 'view_fix_instructions':
       return '先查看修复方法，再继续。'
     case 'contact_support':
-      return '复制诊断摘要并联系支持。'
+      return '导出诊断包并联系支持。'
     default:
-      return failure ? '按推荐动作继续恢复。' : '继续使用当前环境。'
+      return snapshot.installation.state === 'not-installed'
+        ? '开始安装以准备本地隔离环境。'
+        : '继续使用当前环境。'
   }
 }

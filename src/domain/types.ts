@@ -39,6 +39,8 @@ export type AppRoute =
   | '/preinstall'
   | '/precheck'
   | '/installing'
+  | '/install-complete'
+  | '/delete-complete'
   | '/install-failed'
   | '/status'
   | '/recovery'

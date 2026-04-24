@@ -43,18 +43,25 @@ describe('bridge precheck', () => {
     })
   })
 
-  it('emits six v1 precheck categories', async () => {
+  it('emits formal precheck categories', async () => {
     const result = await buildPrecheck(config)
     const codes = result.checks.map((item) => item.code)
 
-    expect(codes).toEqual([
-      'windows_version',
-      'wsl_status',
-      'virtualization',
-      'disk_space',
-      'network',
-      'permission',
-    ])
+    expect(codes).toEqual(
+      expect.arrayContaining([
+        'windows_version',
+        'wsl_status',
+        'virtualization',
+        'disk_space',
+        'network',
+        'permission',
+        'distro',
+        'agent_installed',
+        'host_isolation',
+        'recovery_available',
+        'delete_available',
+      ]),
+    )
   })
 
   it('maps permission-denied WSL output to permission failure', async () => {

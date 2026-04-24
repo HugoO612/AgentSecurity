@@ -30,6 +30,10 @@ export type PrecheckCode =
   | 'network'
   | 'permission'
   | 'distro'
+  | 'agent_installed'
+  | 'host_isolation'
+  | 'recovery_available'
+  | 'delete_available'
   | 'unknown'
 
 export type FailureStage =
@@ -103,6 +107,24 @@ export type OperationStage =
   | 'rebuilding'
   | 'deleting'
   | 'finalizing'
+  | 'collecting_facts'
+  | 'enabling_features'
+  | 'awaiting_permission'
+  | 'awaiting_reboot'
+  | 'preparing_distro'
+  | 'installing_agent'
+  | 'writing_config'
+  | 'starting_bridge'
+  | 'verifying_install'
+  | 'completed'
+  | 'check_wsl2'
+  | 'check_distro'
+  | 'download_installer'
+  | 'verify_checksum'
+  | 'install_agent'
+  | 'write_runtime_config'
+  | 'health_check'
+  | 'cleanup_environment'
 
 export type BridgeConnectionFailureKind =
   | 'bootstrap_invalid'
@@ -127,11 +149,27 @@ export type BootstrapConfig = {
   allowMockFallback: boolean
 }
 
+export type CommandAuditSummary = {
+  commandId: string
+  action: EnvironmentActionType | 'installer'
+  stage: FailureStage | OperationStage
+  startedAt: string
+  completedAt: string
+  durationMs: number
+  exitCode?: number
+  timedOut: boolean
+  stdoutPreview?: string
+  stderrPreview?: string
+  failureCode?: string
+}
+
 export interface PrecheckItem {
   code: PrecheckCode
   status: PrecheckStatus
   message: string
   detail?: string
+  rawDetail?: string
+  resolutionKind?: 'auto' | 'user_confirm' | 'manual' | 'support'
   userAction?: 'none' | 'retry' | 'manual_fix' | 'request_permission'
   updatedAt: string
 }
@@ -150,7 +188,7 @@ export interface FailureSnapshot {
 
 export interface OperationSummary {
   operationId: string
-  action: EnvironmentActionType
+  action: EnvironmentActionType | 'installer'
   status: 'queued' | 'running'
   stage: FailureStage | OperationStage
   startedAt: string
@@ -168,6 +206,46 @@ export interface ActionLock {
   message: string
 }
 
+export interface EnvironmentReport {
+  generatedAt: string
+  runtimeLocation: string
+  targetDistro: string
+  bridgeStatus: string
+  windowsHostWritesSummary: string
+  windowsHostNoWriteSummary: string
+  installationLocationSummary: string
+  isolationBoundarySummary: string
+  currentPermissionSummary: string
+  currentLogLocationSummary: string
+  currentRuntimeDirectorySummary: string
+}
+
+export interface BoundarySelfCheckReport {
+  generatedAt: string
+  agentRunsInsideWindowsHost: boolean
+  bridgeControlsHighRiskActions: boolean
+  currentPermissionState: string
+  bridgeControlStatus: string
+  hostImpactConfirmed: boolean
+  summary: string
+}
+
+export interface DeleteResultReport {
+  generatedAt: string
+  deletedItems: string[]
+  remainingItems: string[]
+  windowsHostResidualSummary: string
+  summary: string
+}
+
+export interface SupportBundleExport {
+  exportedAt: string
+  environmentReport: EnvironmentReport
+  boundarySelfCheck: BoundarySelfCheckReport
+  deleteResult?: DeleteResultReport
+  diagnostics: DiagnosticsSummary
+}
+
 export interface DiagnosticsSummary {
   userSummary: {
     conclusion: string
@@ -179,8 +257,10 @@ export interface DiagnosticsSummary {
     port: number
     generation: number
     runtimeLocation: RuntimeLocation
+    mode?: BridgeMode
+    isMock?: boolean
     lastOperation?: {
-      action: EnvironmentActionType
+      action: EnvironmentActionType | 'installer'
       status: OperationStatus
       operationId: string
       updatedAt: string
@@ -196,6 +276,7 @@ export interface DiagnosticsSummary {
       checkedAt: string
       reasons?: string[]
     }
+    recentCommands?: CommandAuditSummary[]
   }
 }
 
@@ -218,6 +299,12 @@ export interface EnvironmentSnapshot {
     processState?: ProcessState
     lastStartedAt?: string
     lastStoppedAt?: string
+    installationLocationSummary?: string
+    windowsHostWritesSummary?: string
+    isolationBoundarySummary?: string
+    hostImpactConfirmed?: boolean
+    bridgeControlledActionsOnly?: boolean
+    targetDistroKind?: 'dedicated'
   }
   checks: PrecheckItem[]
   health: {
@@ -241,6 +328,32 @@ export interface EnvironmentSnapshot {
   }
   diagnostics: DiagnosticsSummary
   actionLocks?: ActionLock[]
+  commandAudits?: CommandAuditSummary[]
+  report?: {
+    environmentReportAvailable: boolean
+    supportBundleAvailable: boolean
+    environment?: EnvironmentReport
+    boundary?: BoundarySelfCheckReport
+    deleteResult?: DeleteResultReport
+  }
+  deleteSummary?: {
+    deletedItems: string[]
+    remainingItems: string[]
+    windowsHostResidualSummary: string
+  }
+  security?: {
+    boundarySelfCheck: string
+    bridgeControlStatus: string
+  }
+  recovery?: {
+    recommendedAction?: 'retry' | 'rebuild' | 'delete' | 'go_fix' | 'contact_support'
+    availableActions: Array<'retry' | 'rebuild' | 'delete' | 'export_support_bundle'>
+    estimatedDuration: Partial<Record<'retry' | 'rebuild' | 'delete', string>>
+    dataImpactSummary: Partial<Record<'retry' | 'rebuild' | 'delete', string>>
+    hostImpactSummary: Partial<Record<'retry' | 'rebuild' | 'delete', string>>
+    supportBundleAvailable: boolean
+    actionDisabledReason?: Partial<Record<'retry' | 'rebuild' | 'delete', string>>
+  }
 }
 
 export interface ActionRequest {
@@ -252,11 +365,22 @@ export interface ActionRequest {
   payload?: Record<string, unknown>
 }
 
+export interface ConfirmTokenRequest {
+  environmentId: EnvironmentId
+  action: 'rebuild_environment' | 'delete_environment'
+}
+
+export interface ConfirmTokenReceipt {
+  token: string
+  action: 'rebuild_environment' | 'delete_environment'
+  expiresAt: string
+}
+
 export interface ActionReceipt {
   accepted: true
   operationId: string
   environmentId: EnvironmentId
-  action: EnvironmentActionType
+  action: EnvironmentActionType | 'installer'
   acceptedAt: string
   generationAtAccept: number
 }
@@ -264,7 +388,7 @@ export interface ActionReceipt {
 export interface OperationSnapshot {
   operationId: string
   environmentId: EnvironmentId
-  action: EnvironmentActionType
+  action: EnvironmentActionType | 'installer'
   status: OperationStatus
   stage: FailureStage | OperationStage
   progress?: {

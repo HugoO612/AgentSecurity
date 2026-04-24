@@ -11,17 +11,20 @@ import { assign, fromPromise, setup } from 'xstate'
 import type {
   ActionReceipt,
   EnvironmentId,
+  EnvironmentActionType,
 } from '../contracts/environment'
 import {
   adaptContractSnapshot,
   createActionResultFromSnapshot,
-  createInstallRequest,
   createPermissionRequest,
   createPrecheckRequest,
   mapEnvironmentActionToRequest,
 } from '../api/environment-adapter'
 import { BridgeRequestError } from '../api/environment-http-client'
-import { pollOperationToTerminal } from '../api/operation-poller'
+import {
+  pollInstallerOperationToTerminal,
+  pollOperationToTerminal,
+} from '../api/operation-poller'
 import {
   DEFAULT_ENVIRONMENT_ID,
   type EnvironmentClientDiagnostics,
@@ -45,13 +48,23 @@ import type {
   EnvironmentSnapshot,
   FailureInfo,
 } from './types'
+import type { SupportBundleExport } from '../contracts/environment'
 
 type PendingIntent =
   | { kind: 'refresh' }
+  | {
+      kind: 'followOperation'
+      operationId: string
+      action: EnvironmentActionType | 'installer'
+    }
   | { kind: 'precheck' }
   | { kind: 'install' }
   | { kind: 'requestPermission' }
-  | { kind: 'action'; action: Exclude<EnvironmentAction, 'view_fix_instructions' | 'refresh_snapshot'> }
+  | {
+      kind: 'action'
+      action: Exclude<EnvironmentAction, 'view_fix_instructions' | 'refresh_snapshot'>
+      confirmToken?: string
+    }
   | { kind: 'applyScenario'; scenarioId: string }
 
 type MachineContext = {
@@ -66,10 +79,19 @@ type MachineContext = {
 
 type MachineEvent =
   | { type: 'REFRESH' }
+  | {
+      type: 'FOLLOW_OPERATION'
+      operationId: string
+      action: EnvironmentActionType | 'installer'
+    }
   | { type: 'BEGIN_PRECHECK' }
   | { type: 'START_INSTALL' }
   | { type: 'REQUEST_PERMISSION' }
-  | { type: 'RUN_ACTION'; action: Exclude<EnvironmentAction, 'view_fix_instructions' | 'refresh_snapshot'> }
+  | {
+      type: 'RUN_ACTION'
+      action: Exclude<EnvironmentAction, 'view_fix_instructions' | 'refresh_snapshot'>
+      confirmToken?: string
+    }
   | { type: 'APPLY_SCENARIO'; scenarioId: string }
   | { type: 'CONSUME_NAVIGATION' }
 
@@ -91,7 +113,14 @@ type EnvironmentContextValue = {
   beginPrecheck: () => void
   startInstall: () => void
   requestPermission: () => void
-  runAction: (action: Exclude<EnvironmentAction, 'view_fix_instructions' | 'refresh_snapshot'>) => void
+  runAction: (
+    action: Exclude<EnvironmentAction, 'view_fix_instructions' | 'refresh_snapshot'>,
+    confirmToken?: string,
+  ) => void
+  requestConfirmToken: (
+    action: 'rebuild_environment' | 'delete_environment',
+  ) => Promise<string>
+  exportSupportBundle: () => Promise<SupportBundleExport>
   refreshSnapshot: () => void
   applyScenario: (scenarioId: string) => void
   consumeNavigation: () => void
@@ -110,7 +139,6 @@ async function executeActionRequest(
   snapshot: EnvironmentSnapshot,
   action:
     | ReturnType<typeof createPrecheckRequest>
-    | ReturnType<typeof createInstallRequest>
     | ReturnType<typeof createPermissionRequest>
     | ReturnType<typeof mapEnvironmentActionToRequest>,
 ): Promise<IntentExecutionResult> {
@@ -156,6 +184,57 @@ async function executeActionRequest(
   }
 }
 
+async function executeInstallerRequest(
+  client: EnvironmentClient,
+  snapshot: EnvironmentSnapshot,
+  environmentId: EnvironmentId,
+): Promise<IntentExecutionResult> {
+  try {
+    const receipt = await client.startInstaller(environmentId)
+    const operation = await pollInstallerOperationToTerminal(
+      client,
+      receipt.operationId,
+    )
+    const latestSnapshot = await fetchDomainSnapshot(client, environmentId)
+    const success =
+      operation.status === 'succeeded' &&
+      (operation.generationAtCompletion === undefined ||
+        operation.generationAtCompletion === latestSnapshot.generation)
+
+    return {
+      snapshot: latestSnapshot,
+      lastReceipt: receipt,
+      lastResult: success
+        ? {
+            ok: true,
+            snapshot: latestSnapshot,
+            navigateTo: '/install-complete',
+          }
+        : createActionResultFromSnapshot(latestSnapshot, false),
+    }
+  } catch (error) {
+    const latestSnapshot = await tryFetchLatestSnapshot(
+      client,
+      environmentId,
+      snapshot,
+    )
+
+    return {
+      snapshot: latestSnapshot,
+      lastReceipt: null,
+      lastResult: {
+        ok: false,
+        snapshot: latestSnapshot,
+        error: resolveActionError(error, latestSnapshot),
+        navigateTo: resolveRouteForSnapshot(
+          latestSnapshot,
+          deriveCheckSummary(latestSnapshot.checks),
+        ),
+      },
+    }
+  }
+}
+
 async function executeIntent(
   client: EnvironmentClient,
   environmentId: EnvironmentId,
@@ -168,6 +247,39 @@ async function executeIntent(
       return {
         snapshot: nextSnapshot,
         lastResult: null,
+        lastReceipt: null,
+      }
+    }
+    case 'followOperation': {
+      const operation =
+        intent.action === 'installer'
+          ? await pollInstallerOperationToTerminal(client, intent.operationId)
+          : await pollOperationToTerminal(
+              client,
+              environmentId,
+              intent.operationId,
+              intent.action,
+            )
+      const latestSnapshot = await fetchDomainSnapshot(client, environmentId)
+      const success =
+        operation.status === 'succeeded' &&
+        (operation.generationAtCompletion === undefined ||
+          operation.generationAtCompletion === latestSnapshot.generation)
+      const navigateTo =
+        success && intent.action === 'installer'
+          ? '/install-complete'
+          : success && intent.action === 'delete_environment'
+            ? '/delete-complete'
+            : undefined
+      return {
+        snapshot: latestSnapshot,
+        lastResult: success
+          ? {
+              ok: true,
+              snapshot: latestSnapshot,
+              navigateTo,
+            }
+          : createActionResultFromSnapshot(latestSnapshot, false),
         lastReceipt: null,
       }
     }
@@ -188,11 +300,7 @@ async function executeIntent(
         createPrecheckRequest(snapshot),
       )
     case 'install':
-      return executeActionRequest(
-        client,
-        snapshot,
-        createInstallRequest(snapshot),
-      )
+      return executeInstallerRequest(client, snapshot, environmentId)
     case 'requestPermission':
       return executeActionRequest(
         client,
@@ -203,7 +311,9 @@ async function executeIntent(
       return executeActionRequest(
         client,
         snapshot,
-        mapEnvironmentActionToRequest(intent.action, snapshot),
+        mapEnvironmentActionToRequest(intent.action, snapshot, {
+          confirmToken: intent.confirmToken,
+        }),
       )
   }
 }
@@ -261,6 +371,18 @@ const environmentMachine = setup({
             pendingRoute: null,
           })),
         },
+        FOLLOW_OPERATION: {
+          target: 'busy',
+          actions: assign(({ event }) => ({
+            pendingIntent: {
+              kind: 'followOperation',
+              operationId: event.operationId,
+              action: event.action,
+            },
+            lastResult: null,
+            pendingRoute: event.action === 'installer' ? '/installing' : null,
+          })),
+        },
         BEGIN_PRECHECK: {
           target: 'busy',
           actions: assign(() => ({
@@ -295,7 +417,11 @@ const environmentMachine = setup({
           },
           target: 'busy',
           actions: assign(({ event }) => ({
-            pendingIntent: { kind: 'action', action: event.action },
+            pendingIntent: {
+              kind: 'action',
+              action: event.action,
+              confirmToken: event.confirmToken,
+            },
             lastResult: null,
             pendingRoute:
               event.action === 'retry_install' ? '/installing' : '/status',
@@ -380,6 +506,19 @@ export function EnvironmentProvider({
   }, [initialSnapshot, send])
 
   const snapshot = state.context.snapshot
+
+  useEffect(() => {
+    if (!snapshot.activeOperation || !state.matches('idle')) {
+      return
+    }
+
+    send({
+      type: 'FOLLOW_OPERATION',
+      operationId: snapshot.activeOperation.operationId,
+      action: snapshot.activeOperation.action,
+    })
+  }, [send, snapshot.activeOperation, state])
+
   const checkSummary = deriveCheckSummary(snapshot.checks)
   const environmentState = deriveEnvironmentState(snapshot, checkSummary)
   const derived = useMemo<EnvironmentDerived>(
@@ -411,7 +550,16 @@ export function EnvironmentProvider({
       beginPrecheck: () => send({ type: 'BEGIN_PRECHECK' }),
       startInstall: () => send({ type: 'START_INSTALL' }),
       requestPermission: () => send({ type: 'REQUEST_PERMISSION' }),
-      runAction: (action) => send({ type: 'RUN_ACTION', action }),
+      runAction: (action, confirmToken) =>
+        send({ type: 'RUN_ACTION', action, confirmToken }),
+      requestConfirmToken: async (action) => {
+        const receipt = await resolvedClient.requestConfirmToken(
+          snapshot.environmentId,
+          action,
+        )
+        return receipt.token
+      },
+      exportSupportBundle: async () => resolvedClient.exportSupportBundle!(),
       refreshSnapshot: () => send({ type: 'REFRESH' }),
       applyScenario: async (scenarioId) => {
         send({ type: 'APPLY_SCENARIO', scenarioId })
@@ -428,6 +576,7 @@ export function EnvironmentProvider({
       state.context.pendingRoute,
       state.context.lastReceipt,
       state.context.lastResult,
+      snapshot.environmentId,
     ],
   )
 

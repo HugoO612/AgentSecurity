@@ -34,6 +34,12 @@ export function PreinstallPage() {
       <div className="stack-lg">
         <article className="content-card">
           <p>{copy('COPY_DESC_SCOPE')}</p>
+          <ul className="info-list">
+            <li>会创建：专用隔离环境、受控运行目录、诊断与日志目录。</li>
+            <li>不会做：不会把 agent 直接安装到 Windows 主环境。</li>
+            <li>权限请求：仅在启用系统能力或准备隔离环境时请求。</li>
+            <li>删除后：会删除隔离环境运行态，受控目录会按策略保留用于支持排障。</li>
+          </ul>
           <p>{copy('COPY_DESC_PERMISSION')}</p>
           <p>{copy('COPY_DESC_STORAGE')}</p>
         </article>

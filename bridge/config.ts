@@ -1,9 +1,11 @@
+import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { BridgeMode } from '../src/contracts/environment.ts'
 
-export const BRIDGE_SCHEMA_VERSION = 2
-export const BRIDGE_VERSION = '1.0.0'
+export const BRIDGE_SCHEMA_VERSION = 3
+export const BRIDGE_VERSION = '2.0.0'
 export const DEFAULT_ENVIRONMENT_ID = 'local-default'
 
 export type BridgeConfig = {
@@ -18,10 +20,22 @@ export type BridgeConfig = {
   operationsDir: string
   runtimeDir: string
   diagnosticsDir: string
+  targetDistro: string
+  distroSeedName: string
+  reportDir: string
+  distroInstallRoot: string
+  elevationHelperCommand: string
+  rebootResumeMarkerPath: string
+  hostWriteAllowlist: string[]
+  installerDownloadUrl: string
+  installerChecksum: string
+  bundledRootfsPath: string
+  bundledAgentArtifactPath: string
 }
 
 export function createBridgeConfig(): BridgeConfig {
-  const dataRoot = join(getLocalAppDataRoot(), 'AgentSecurity', 'v1')
+  const dataRoot = join(getLocalAppDataRoot(), 'AgentSecurity', 'v2')
+  const bridgeRoot = dirname(fileURLToPath(import.meta.url))
   const port = Number(process.env.AGENT_SECURITY_BRIDGE_PORT ?? '4319')
   const mode = resolveBridgeMode()
   const bridgeOrigin = `http://127.0.0.1:${port}`
@@ -52,6 +66,26 @@ export function createBridgeConfig(): BridgeConfig {
       .filter(Boolean),
   )
 
+  const runtimeDir = join(dataRoot, 'runtime')
+  const diagnosticsDir = join(dataRoot, 'diagnostics')
+  const reportDir = join(dataRoot, 'reports')
+  const distroInstallRoot = join(dataRoot, 'distros')
+  const bundledRootfsPath =
+    process.env.AGENT_SECURITY_BUNDLED_ROOTFS_PATH?.trim() ||
+    join(bridgeRoot, 'assets', 'agent-security-rootfs.tar')
+  const bundledAgentArtifactPath =
+    process.env.AGENT_SECURITY_BUNDLED_AGENT_PATH?.trim() ||
+    join(bridgeRoot, 'assets', 'agent-security-agent.pkg')
+
+  if (mode === 'production') {
+    if (!existsSync(bundledRootfsPath)) {
+      throw new Error('Bundled rootfs artifact is required in production mode.')
+    }
+    if (!existsSync(bundledAgentArtifactPath)) {
+      throw new Error('Bundled agent artifact is required in production mode.')
+    }
+  }
+
   return {
     mode,
     port,
@@ -62,8 +96,31 @@ export function createBridgeConfig(): BridgeConfig {
     dataRoot,
     stateFile: join(dataRoot, 'state', 'environment-state.json'),
     operationsDir: join(dataRoot, 'operations'),
-    runtimeDir: join(dataRoot, 'runtime'),
-    diagnosticsDir: join(dataRoot, 'diagnostics'),
+    runtimeDir,
+    diagnosticsDir,
+    targetDistro: process.env.AGENT_SECURITY_TARGET_DISTRO?.trim() || 'AgentSecurity',
+    distroSeedName: process.env.AGENT_SECURITY_DISTRO_SEED?.trim() || 'AgentSecurityBase',
+    reportDir,
+    distroInstallRoot,
+    elevationHelperCommand:
+      process.env.AGENT_SECURITY_ELEVATION_HELPER?.trim() ||
+      'powershell.exe -NoProfile -Command "Write-Output elevation-requested"',
+    rebootResumeMarkerPath: join(runtimeDir, 'resume-after-reboot.json'),
+    hostWriteAllowlist: [
+      dataRoot,
+      runtimeDir,
+      diagnosticsDir,
+      reportDir,
+      distroInstallRoot,
+    ],
+    installerDownloadUrl:
+      process.env.AGENT_SECURITY_AGENT_INSTALL_URL?.trim() ||
+      'https://example.com/openclaw/install.sh',
+    installerChecksum:
+      process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256?.trim() ||
+      'dev-skip-checksum',
+    bundledRootfsPath,
+    bundledAgentArtifactPath,
   }
 }
 

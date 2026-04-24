@@ -51,10 +51,10 @@ describe('bridge server', () => {
     expect(snapshot.installation.state).toBe('not-installed')
 
     const stateFile = await readFile(
-      join(cleanupDir, 'AgentSecurity', 'v1', 'state', 'environment-state.json'),
+      join(cleanupDir, 'AgentSecurity', 'v2', 'state', 'environment-state.json'),
       'utf8',
     )
-    expect(stateFile).toContain('"schemaVersion": 2')
+    expect(stateFile).toContain('"schemaVersion": 3')
   })
 
   it('runs the receipt -> operation -> snapshot flow and rejects concurrent actions', async () => {
@@ -160,5 +160,40 @@ describe('bridge server', () => {
     expect(diagnostics.userSummary.conclusion).toBeTruthy()
     expect(diagnostics.supportSummary.bridgeVersion).toBeTruthy()
     expect(JSON.stringify(diagnostics)).not.toContain('test-token')
+  })
+
+  it('issues confirm tokens and exports sanitized support bundle', async () => {
+    const tokenResponse = await fetch(
+      'http://127.0.0.1:4321/actions/confirm-token',
+      {
+        method: 'POST',
+        headers: {
+          'x-agent-security-token': 'test-token',
+          'content-type': 'application/json',
+          Origin: 'http://localhost:5173',
+        },
+        body: JSON.stringify({
+          environmentId: 'local-default',
+          action: 'delete_environment',
+        }),
+      },
+    )
+    const tokenReceipt = await tokenResponse.json()
+    expect(tokenResponse.status).toBe(200)
+    expect(tokenReceipt.token).toBeTruthy()
+
+    const bundleResponse = await fetch(
+      'http://127.0.0.1:4321/diagnostics/export',
+      {
+        headers: {
+          'x-agent-security-token': 'test-token',
+        },
+      },
+    )
+    const bundle = await bundleResponse.json()
+
+    expect(bundle.exportedAt).toBeTruthy()
+    expect(JSON.stringify(bundle)).not.toContain(cleanupDir)
+    expect(JSON.stringify(bundle)).not.toContain('test-token')
   })
 })

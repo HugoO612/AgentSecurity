@@ -11,7 +11,7 @@ const TERMINAL_STATUSES: OperationSnapshot['status'][] = [
   'cancelled',
 ]
 
-const ACTION_TIMEOUTS_MS: Record<EnvironmentActionType, number> = {
+const ACTION_TIMEOUTS_MS: Record<EnvironmentActionType | 'installer', number> = {
   run_precheck: 60_000,
   install_environment: 600_000,
   retry_install: 600_000,
@@ -21,6 +21,7 @@ const ACTION_TIMEOUTS_MS: Record<EnvironmentActionType, number> = {
   restart_agent: 60_000,
   rebuild_environment: 600_000,
   delete_environment: 600_000,
+  installer: 900_000,
 }
 
 export async function pollOperationToTerminal(
@@ -29,15 +30,34 @@ export async function pollOperationToTerminal(
   operationId: string,
   action: EnvironmentActionType,
 ): Promise<OperationSnapshot> {
+  return pollUntilTerminal(
+    () => client.getOperation(environmentId, operationId),
+    ACTION_TIMEOUTS_MS[action],
+  )
+}
+
+export async function pollInstallerOperationToTerminal(
+  client: EnvironmentClient,
+  operationId: string,
+): Promise<OperationSnapshot> {
+  return pollUntilTerminal(
+    () => client.getInstallerOperation(operationId),
+    ACTION_TIMEOUTS_MS.installer,
+  )
+}
+
+async function pollUntilTerminal(
+  readOperation: () => Promise<OperationSnapshot>,
+  timeoutMs: number,
+): Promise<OperationSnapshot> {
   const start = Date.now()
-  let operation = await client.getOperation(environmentId, operationId)
+  let operation = await readOperation()
 
   while (!TERMINAL_STATUSES.includes(operation.status)) {
-    if (Date.now() - start >= ACTION_TIMEOUTS_MS[action]) {
+    if (Date.now() - start >= timeoutMs) {
       return {
         ...operation,
         status: 'failed',
-        stage: operation.stage,
         error: {
           stage: 'bridge_connection',
           type: 'timeout',
@@ -50,7 +70,7 @@ export async function pollOperationToTerminal(
     }
 
     await delay(resolvePollInterval(Date.now() - start))
-    operation = await client.getOperation(environmentId, operationId)
+    operation = await readOperation()
   }
 
   return operation

@@ -21,12 +21,14 @@ export function adaptContractSnapshot(
 export function mapEnvironmentActionToRequest(
   action: Extract<EnvironmentAction, EnvironmentActionType>,
   snapshot: EnvironmentSnapshot,
+  options?: { confirmToken?: string },
 ): ActionRequest {
   return {
     environmentId: snapshot.environmentId,
     action,
     requestId: createRequestId(action),
     expectedGeneration: snapshot.generation,
+    confirmToken: options?.confirmToken,
   }
 }
 
@@ -98,6 +100,7 @@ export function createDiagnosticsText(summary: DiagnosticsSummary): string {
   const lastOperation = summary.supportSummary.lastOperation
   const lastFailure = summary.supportSummary.lastFailure
   const lastHealthCheck = summary.supportSummary.lastHealthCheck
+  const recentCommands = summary.supportSummary.recentCommands ?? []
   const lines = [
     'Agent Security Diagnostics',
     `Conclusion: ${summary.userSummary.conclusion}`,
@@ -107,6 +110,8 @@ export function createDiagnosticsText(summary: DiagnosticsSummary): string {
     `Port: ${summary.supportSummary.port}`,
     `Generation: ${summary.supportSummary.generation}`,
     `Runtime location: ${summary.supportSummary.runtimeLocation}`,
+    `Mode: ${summary.supportSummary.mode ?? 'unknown'}`,
+    `Is mock: ${summary.supportSummary.isMock ? 'yes' : 'no'}`,
     `Last operation: ${lastOperation?.action ?? 'none'}`,
     `Last operation status: ${lastOperation?.status ?? 'unknown'}`,
     `Last operation id: ${lastOperation?.operationId ?? 'unknown'}`,
@@ -119,6 +124,15 @@ export function createDiagnosticsText(summary: DiagnosticsSummary): string {
 
   if (lastHealthCheck?.reasons?.length) {
     lines.push(`Health reasons: ${lastHealthCheck.reasons.join('; ')}`)
+  }
+
+  if (recentCommands.length) {
+    lines.push('Recent command audits:')
+    for (const item of recentCommands.slice(-5)) {
+      lines.push(
+        `- ${item.action}/${item.commandId} exit=${item.exitCode ?? 'n/a'} failure=${item.failureCode ?? 'none'} durationMs=${item.durationMs}`,
+      )
+    }
   }
 
   return lines.join('\n')

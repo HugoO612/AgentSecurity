@@ -29,6 +29,32 @@ export function deriveEnvironmentState(
   snapshot: EnvironmentSnapshot,
   checkSummary: CheckSummary,
 ): EnvironmentState {
+  if (snapshot.activeOperation?.status === 'running') {
+    if (
+      snapshot.activeOperation.action === 'installer' ||
+      snapshot.activeOperation.action === 'install_environment' ||
+      snapshot.activeOperation.action === 'retry_install' ||
+      snapshot.activeOperation.action === 'request_permission'
+    ) {
+      return 'installing'
+    }
+
+    if (snapshot.activeOperation.action === 'rebuild_environment') {
+      return 'rebuilding'
+    }
+
+    if (snapshot.activeOperation.action === 'delete_environment') {
+      return 'deleting'
+    }
+
+    if (
+      snapshot.activeOperation.action === 'start_agent' ||
+      snapshot.activeOperation.action === 'restart_agent'
+    ) {
+      return 'starting'
+    }
+  }
+
   switch (snapshot.installation.state) {
     case 'not-installed':
       return 'not_installed'
@@ -63,6 +89,33 @@ export function deriveAvailableActions(
 ): EnvironmentAction[] {
   if (snapshot.activeOperation) {
     return []
+  }
+
+  if (snapshot.failure && snapshot.recovery?.availableActions?.length) {
+    const mapped = snapshot.recovery.availableActions
+      .map((action) => {
+        if (action === 'retry') {
+          return 'retry_install'
+        }
+        if (action === 'rebuild') {
+          return 'rebuild_environment'
+        }
+        if (action === 'delete') {
+          return 'delete_environment'
+        }
+        return null
+      })
+      .filter(
+        (
+          action,
+        ): action is Extract<
+          EnvironmentAction,
+          'retry_install' | 'rebuild_environment' | 'delete_environment'
+        > => action !== null,
+      )
+    if (mapped.length > 0) {
+      return filterLockedActions(mapped, snapshot)
+    }
   }
 
   if (state === 'ready') {
@@ -120,6 +173,22 @@ export function deriveRecommendedAction(
   snapshot: EnvironmentSnapshot,
   checkSummary: CheckSummary,
 ): EnvironmentAction | undefined {
+  const recovery = snapshot.recovery
+  if (recovery?.recommendedAction) {
+    if (recovery.recommendedAction === 'retry') {
+      return 'retry_install'
+    }
+    if (recovery.recommendedAction === 'rebuild') {
+      return 'rebuild_environment'
+    }
+    if (recovery.recommendedAction === 'delete') {
+      return 'delete_environment'
+    }
+    if (recovery.recommendedAction === 'go_fix') {
+      return 'view_fix_instructions'
+    }
+  }
+
   const state = deriveEnvironmentState(snapshot, checkSummary)
   const failure = snapshot.failure
 
@@ -202,6 +271,13 @@ export function resolveRouteForSnapshot(
   snapshot: EnvironmentSnapshot,
   checkSummary: CheckSummary,
 ): AppRoute {
+  if (
+    snapshot.installation.state === 'not-installed' &&
+    (snapshot.deleteSummary?.deletedItems.length ?? 0) > 0
+  ) {
+    return '/delete-complete'
+  }
+
   const state = deriveEnvironmentState(snapshot, checkSummary)
 
   switch (state) {
@@ -212,8 +288,6 @@ export function resolveRouteForSnapshot(
       return '/precheck'
     case 'installing':
       return '/installing'
-    case 'install_failed':
-      return '/install-failed'
     case 'ready':
     case 'starting':
     case 'running':
@@ -222,6 +296,8 @@ export function resolveRouteForSnapshot(
     case 'rebuilding':
     case 'deleting':
       return '/status'
+    case 'install_failed':
+      return '/install-failed'
   }
 }
 
@@ -250,6 +326,18 @@ export function isRouteCompatibleWithSnapshot(
       snapshot,
     )
     return Boolean(snapshot.failure) || availableActions.length > 0
+  }
+
+  if (route === '/install-complete') {
+    const state = deriveEnvironmentState(snapshot, checkSummary)
+    return ['ready', 'running', 'stopped', 'degraded'].includes(state)
+  }
+
+  if (route === '/delete-complete') {
+    return (
+      snapshot.installation.state === 'not-installed' &&
+      (snapshot.deleteSummary?.deletedItems.length ?? 0) > 0
+    )
   }
 
   return false

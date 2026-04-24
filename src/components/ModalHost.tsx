@@ -6,8 +6,9 @@ import { useUiState } from '../ui/ui-store'
 
 export function ModalHost() {
   const { activeModal, setActiveModal } = useUiState()
-  const { requestPermission, runAction } = useEnvironment()
+  const { snapshot, requestPermission, runAction, requestConfirmToken } = useEnvironment()
   const [acknowledged, setAcknowledged] = useState(false)
+  const recovery = snapshot.recovery
 
   const renderImpactSections = (impactKey: Parameters<typeof copy>[0], safeKey: Parameters<typeof copy>[0]) => (
     <>
@@ -15,6 +16,20 @@ export function ModalHost() {
       <p>{copy(impactKey)}</p>
       <p className="eyebrow">{copy('COPY_LABEL_WILL_NOT_AFFECT')}</p>
       <p>{copy(safeKey)}</p>
+      <p className="eyebrow">预计耗时</p>
+      <p>
+        {activeModal === 'rebuild_confirm'
+          ? recovery?.estimatedDuration.rebuild ?? '5-10 分钟'
+          : activeModal === 'delete_confirm'
+            ? recovery?.estimatedDuration.delete ?? '1-2 分钟'
+            : '通常少于 1 分钟'}
+      </p>
+      {activeModal === 'rebuild_confirm' || activeModal === 'delete_confirm' ? (
+        <>
+          <p className="eyebrow">不可逆提示</p>
+          <p>确认后会立即执行高影响动作，当前隔离环境内容可能无法恢复。</p>
+        </>
+      ) : null}
     </>
   )
 
@@ -61,7 +76,9 @@ export function ModalHost() {
         onConfirm={() => {
           setAcknowledged(false)
           setActiveModal(null)
-          runAction('rebuild_environment')
+          void requestConfirmToken('rebuild_environment').then((token) => {
+            runAction('rebuild_environment', token)
+          })
         }}
       >
         <label className="checkbox-row">
@@ -89,7 +106,9 @@ export function ModalHost() {
       onCancel={() => setActiveModal(null)}
       onConfirm={() => {
         setActiveModal(null)
-        runAction('delete_environment')
+        void requestConfirmToken('delete_environment').then((token) => {
+          runAction('delete_environment', token)
+        })
       }}
     />
   )

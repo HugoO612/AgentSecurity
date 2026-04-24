@@ -5,10 +5,12 @@ import { derivePrimaryPageAction } from '../pageActions'
 import { PageScaffold } from '../../components/PageScaffold'
 import { PrecheckList } from '../../components/PrecheckList'
 import { useEnvironment } from '../../domain/machine'
+import { useUiState } from '../../ui/ui-store'
 
 export function PrecheckPage() {
   const navigate = useNavigate()
   const { snapshot, checkSummary, state, startInstall } = useEnvironment()
+  const { pushNotice } = useUiState()
   const [showFixes, setShowFixes] = useState(checkSummary.blockCount > 0)
   const primaryAction = derivePrimaryPageAction(
     state,
@@ -67,6 +69,23 @@ export function PrecheckPage() {
           </article>
         ) : null}
         <div className="action-row">
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={async () => {
+              const rows = snapshot.checks.map((item) => ({
+                code: item.code,
+                status: item.status,
+                message: item.message,
+                rawDetail: item.rawDetail,
+                resolutionKind: item.resolutionKind,
+              }))
+              await navigator.clipboard.writeText(JSON.stringify(rows, null, 2))
+              pushNotice(copy('COPY_NOTICE_DIAGNOSTICS_COPIED'))
+            }}
+          >
+            复制检查结果
+          </button>
           <button
             type="button"
             className="ghost-button"

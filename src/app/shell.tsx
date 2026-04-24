@@ -35,6 +35,7 @@ export function AppShell() {
     setDebugPanelOpen,
     selectedScenarioId,
   } = useUiState()
+  const showDebugUi = import.meta.env.DEV
 
   useEffect(() => {
     warnOnBannedTerms()
@@ -83,16 +84,18 @@ export function AppShell() {
     <div className="app-shell">
       <header className="app-topbar">
         <div>
-          <p className="eyebrow">Agent Security v1</p>
-          <h1 className="shell-title">本机隔离运行演示骨架</h1>
+          <p className="eyebrow">Agent Security</p>
+          <h1 className="shell-title">本地隔离运行</h1>
         </div>
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={() => setDebugPanelOpen(!debugPanelOpen)}
-        >
-          调试入口
-        </button>
+        {showDebugUi ? (
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => setDebugPanelOpen(!debugPanelOpen)}
+          >
+            调试入口
+          </button>
+        ) : null}
       </header>
       {clientDiagnostics.mode === 'mock-fallback' ? (
         <div className="notice-banner notice-banner--warning">
@@ -107,13 +110,15 @@ export function AppShell() {
         ) : (
           <Outlet />
         )}
-        <DebugDrawer
-          open={debugPanelOpen}
-          onApplyScenario={(id) => {
-            applyScenario(id)
-            navigate(getScenarioTemplate(id).route)
-          }}
-        />
+        {showDebugUi ? (
+          <DebugDrawer
+            open={debugPanelOpen}
+            onApplyScenario={(id) => {
+              applyScenario(id)
+              navigate(getScenarioTemplate(id).route)
+            }}
+          />
+        ) : null}
       </div>
       <ModalHost />
     </div>

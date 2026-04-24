@@ -38,6 +38,22 @@ const copyMap = {
     titleKey: 'COPY_CHECK_ISOLATION_CAPABILITY_TITLE',
     messageKey: 'COPY_CHECK_ISOLATION_CAPABILITY_DESC',
   },
+  agent_installed: {
+    titleKey: 'COPY_CHECK_ISOLATION_CAPABILITY_TITLE',
+    messageKey: 'COPY_CHECK_ISOLATION_CAPABILITY_DESC',
+  },
+  host_isolation: {
+    titleKey: 'COPY_CHECK_ISOLATION_CAPABILITY_TITLE',
+    messageKey: 'COPY_CHECK_ISOLATION_CAPABILITY_DESC',
+  },
+  recovery_available: {
+    titleKey: 'COPY_CHECK_PERMISSION_READY_TITLE',
+    messageKey: 'COPY_CHECK_PERMISSION_READY_DESC',
+  },
+  delete_available: {
+    titleKey: 'COPY_CHECK_PERMISSION_READY_TITLE',
+    messageKey: 'COPY_CHECK_PERMISSION_READY_DESC',
+  },
   unknown: {
     titleKey: 'COPY_CHECK_SYSTEM_VERSION_TITLE',
     messageKey: 'COPY_CHECK_SYSTEM_VERSION_DESC',
@@ -68,8 +84,8 @@ export function PrecheckList({
         {checks.map((item) => (
           <article className="precheck-item" key={`${item.code}-${item.updatedAt}`}>
             <div>
-              <h4>{copy(copyMap[item.code].titleKey)}</h4>
-              <p>{item.message || copy(copyMap[item.code].messageKey)}</p>
+              <h4>{copy((copyMap[item.code] ?? copyMap.unknown).titleKey)}</h4>
+              <p>{item.message || copy((copyMap[item.code] ?? copyMap.unknown).messageKey)}</p>
               {item.detail ? <small>{item.detail}</small> : null}
             </div>
             <span className={`chip chip--${item.status}`}>

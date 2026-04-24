@@ -1,12 +1,17 @@
 import type {
   ActionReceipt,
   ActionRequest,
+  ConfirmTokenReceipt,
   BootstrapErrorCode,
+  BoundarySelfCheckReport,
+  DeleteResultReport,
   DiagnosticsSummary,
   EnvironmentId,
+  EnvironmentReport,
   EnvironmentSnapshot,
   OperationSnapshot,
   BridgeConnectionFailureKind,
+  SupportBundleExport,
 } from '../contracts/environment'
 
 export const DEFAULT_ENVIRONMENT_ID: EnvironmentId = 'local-default'
@@ -32,11 +37,21 @@ export type EnvironmentClientDiagnostics = {
 export interface EnvironmentClient {
   getSnapshot(environmentId: EnvironmentId): Promise<EnvironmentSnapshot>
   postAction(request: ActionRequest): Promise<ActionReceipt>
+  requestConfirmToken(
+    environmentId: EnvironmentId,
+    action: 'rebuild_environment' | 'delete_environment',
+  ): Promise<ConfirmTokenReceipt>
+  startInstaller(environmentId: EnvironmentId): Promise<ActionReceipt>
   getOperation(
     environmentId: EnvironmentId,
     operationId: string,
   ): Promise<OperationSnapshot>
+  getInstallerOperation(operationId: string): Promise<OperationSnapshot>
   getDiagnosticsSummary?(environmentId: EnvironmentId): Promise<DiagnosticsSummary>
+  getEnvironmentReport?(): Promise<EnvironmentReport>
+  getBoundaryReport?(): Promise<BoundarySelfCheckReport>
+  getDeleteReport?(): Promise<DeleteResultReport | null>
+  exportSupportBundle?(): Promise<SupportBundleExport>
   getDiagnostics?(): EnvironmentClientDiagnostics
   debugApplyScenario?(scenarioId: string): Promise<void>
 }

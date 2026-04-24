@@ -1,9 +1,14 @@
 import type {
   ActionReceipt,
   ActionRequest,
+  BoundarySelfCheckReport,
+  ConfirmTokenReceipt,
+  DeleteResultReport,
   DiagnosticsSummary,
+  EnvironmentReport,
   EnvironmentSnapshot,
   OperationSnapshot,
+  SupportBundleExport,
 } from '../contracts/environment'
 import type { EnvironmentClient } from '../api/environment-client'
 import { BridgeRequestError } from '../api/environment-http-client'
@@ -39,6 +44,73 @@ export function createMockEnvironmentClient(): EnvironmentClient {
     snapshot: clone(initialFixture.snapshot),
     scenarioId: initialFixture.id,
     operations: new Map(),
+  }
+  const getEnvironmentReport = async (): Promise<EnvironmentReport> =>
+    clone(
+      state.snapshot.report?.environment ?? {
+        generatedAt: new Date().toISOString(),
+        runtimeLocation: state.snapshot.runtime.location,
+        targetDistro: state.snapshot.runtime.distroName ?? 'AgentSecurity',
+        bridgeStatus: 'healthy',
+        windowsHostWritesSummary:
+          state.snapshot.runtime.windowsHostWritesSummary ??
+          'Windows host writes are controlled.',
+        windowsHostNoWriteSummary:
+          'Windows host ordinary user files are not used as runtime.',
+        installationLocationSummary:
+          state.snapshot.runtime.installationLocationSummary ??
+          'Installed in isolated runtime.',
+        isolationBoundarySummary:
+          state.snapshot.runtime.isolationBoundarySummary ??
+          'Runtime is isolated from Windows host.',
+        currentPermissionSummary: 'Permission is least-privilege by default.',
+        currentLogLocationSummary: 'Logs are inside controlled diagnostics dir.',
+        currentRuntimeDirectorySummary: 'Runtime files are in controlled runtime dir.',
+      },
+    )
+  const getBoundaryReport = async (): Promise<BoundarySelfCheckReport> =>
+    clone(
+      state.snapshot.report?.boundary ?? {
+        generatedAt: new Date().toISOString(),
+        agentRunsInsideWindowsHost: false,
+        bridgeControlsHighRiskActions: true,
+        currentPermissionState: 'normal',
+        bridgeControlStatus: state.snapshot.security?.bridgeControlStatus ?? 'enforced',
+        hostImpactConfirmed: true,
+        summary: state.snapshot.security?.boundarySelfCheck ?? 'Boundary self-check passed.',
+      },
+    )
+  const getDeleteReport = async (): Promise<DeleteResultReport | null> =>
+    clone(state.snapshot.report?.deleteResult ?? null)
+  const getOperation = async (operationId: string): Promise<OperationSnapshot> => {
+    const operation = state.operations.get(operationId)
+    if (!operation) {
+      throw new BridgeRequestError('Mock operation was not found.', 404, {
+        ok: false,
+        error: {
+          code: 'operation_not_found',
+          message: 'Operation not found.',
+          retryable: false,
+          stage: 'unknown',
+          type: 'state_conflict',
+        },
+        diagnostics: state.snapshot.diagnostics,
+      })
+    }
+
+    if (operation.pollsRemaining > 0) {
+      operation.pollsRemaining -= 1
+      return {
+        ...clone(operation.operation),
+        status: 'running',
+      }
+    }
+
+    state.snapshot = {
+      ...clone(operation.finalSnapshot),
+      activeOperation: undefined,
+    }
+    return clone(operation.operation)
   }
 
   return {
@@ -105,39 +177,98 @@ export function createMockEnvironmentClient(): EnvironmentClient {
       return clone(plan.value.receipt)
     },
 
-    async getOperation(_environmentId, operationId: string): Promise<OperationSnapshot> {
-      const operation = state.operations.get(operationId)
-      if (!operation) {
-        throw new BridgeRequestError('Mock operation was not found.', 404, {
+    async requestConfirmToken(
+      _environmentId,
+      action,
+    ): Promise<ConfirmTokenReceipt> {
+      return {
+        token: `mock-confirm-${action}-${Date.now()}`,
+        action,
+        expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+      }
+    },
+
+    async startInstaller(environmentId): Promise<ActionReceipt> {
+      const plan =
+        contractFixturesById[state.scenarioId]?.actionPlans?.install_environment ??
+        null
+      if (!plan || plan.kind === 'error') {
+        throw new BridgeRequestError('Mock installer is unavailable.', 409, {
           ok: false,
           error: {
-            code: 'operation_not_found',
-            message: 'Operation not found.',
+            code: 'action_not_available',
+            message: 'Installer is not available in this scenario.',
             retryable: false,
-            stage: 'unknown',
+            stage: 'environment_install',
             type: 'state_conflict',
           },
           diagnostics: state.snapshot.diagnostics,
         })
       }
 
-      if (operation.pollsRemaining > 0) {
-        operation.pollsRemaining -= 1
-        return {
-          ...clone(operation.operation),
+      state.operations.set(plan.value.receipt.operationId, {
+        operation: clone({
+          ...plan.value.operation,
+          action: 'installer',
+        }),
+        finalSnapshot: clone(plan.value.finalSnapshot),
+        pollsRemaining: plan.value.operation.status === 'running' ? 1 : 0,
+      })
+
+      const acceptedAt = plan.value.receipt.acceptedAt
+      state.snapshot = {
+        ...clone(state.snapshot),
+        activeOperation: {
+          operationId: plan.value.receipt.operationId,
+          action: 'installer',
           status: 'running',
-        }
+          stage: plan.value.operation.stage,
+          startedAt: acceptedAt,
+          updatedAt: acceptedAt,
+          requestedGeneration: state.snapshot.generation,
+        },
       }
 
-      state.snapshot = {
-        ...clone(operation.finalSnapshot),
-        activeOperation: undefined,
+      return {
+        ...clone(plan.value.receipt),
+        environmentId,
+        action: 'installer',
       }
-      return clone(operation.operation)
+    },
+
+    async getOperation(_environmentId, operationId: string): Promise<OperationSnapshot> {
+      return getOperation(operationId)
     },
 
     async getDiagnosticsSummary(): Promise<DiagnosticsSummary> {
       return clone(state.snapshot.diagnostics)
+    },
+
+    async getInstallerOperation(operationId: string): Promise<OperationSnapshot> {
+      return getOperation(operationId)
+    },
+
+    async getEnvironmentReport(): Promise<EnvironmentReport> {
+      return getEnvironmentReport()
+    },
+
+    async getBoundaryReport(): Promise<BoundarySelfCheckReport> {
+      return getBoundaryReport()
+    },
+
+    async getDeleteReport(): Promise<DeleteResultReport | null> {
+      return getDeleteReport()
+    },
+
+    async exportSupportBundle(): Promise<SupportBundleExport> {
+      const deleteResult = await getDeleteReport()
+      return {
+        exportedAt: new Date().toISOString(),
+        environmentReport: await getEnvironmentReport(),
+        boundarySelfCheck: await getBoundaryReport(),
+        ...(deleteResult ? { deleteResult } : {}),
+        diagnostics: clone(state.snapshot.diagnostics),
+      }
     },
 
     async debugApplyScenario(scenarioId: string) {

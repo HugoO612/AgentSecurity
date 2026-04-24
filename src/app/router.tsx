@@ -2,6 +2,8 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppShell } from './shell'
 import { EntryPage } from './pages/EntryPage'
 import { InstallFailedPage } from './pages/InstallFailedPage'
+import { InstallCompletePage } from './pages/InstallCompletePage'
+import { DeleteCompletePage } from './pages/DeleteCompletePage'
 import { InstallingPage } from './pages/InstallingPage'
 import { PrecheckPage } from './pages/PrecheckPage'
 import { PreinstallPage } from './pages/PreinstallPage'
@@ -17,6 +19,8 @@ export const router = createBrowserRouter([
       { path: 'preinstall', element: <PreinstallPage /> },
       { path: 'precheck', element: <PrecheckPage /> },
       { path: 'installing', element: <InstallingPage /> },
+      { path: 'install-complete', element: <InstallCompletePage /> },
+      { path: 'delete-complete', element: <DeleteCompletePage /> },
       { path: 'install-failed', element: <InstallFailedPage /> },
       { path: 'status', element: <StatusPage /> },
       { path: 'recovery', element: <RecoveryPage /> },

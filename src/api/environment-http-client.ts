@@ -1,21 +1,33 @@
 import type {
   ActionReceipt,
   ActionRequest,
+  BoundarySelfCheckReport,
+  ConfirmTokenReceipt,
   BridgeErrorResponse,
+  DeleteResultReport,
   DiagnosticsSummary,
   EnvironmentId,
+  EnvironmentReport,
   EnvironmentSnapshot,
   OperationSnapshot,
+  SupportBundleExport,
 } from '../contracts/environment'
 import type {
   EnvironmentClient,
   EnvironmentClientDiagnostics,
 } from './environment-client'
 import {
+  getBoundaryReportPath,
+  getDeleteReportPath,
+  getDiagnosticsExportPath,
   getDiagnosticsSummaryPath,
+  getEnvironmentReportPath,
+  getInstallerOperationPath,
   getOperationPath,
   getSnapshotPath,
   postActionsPath,
+  postConfirmTokenPath,
+  postInstallerStartPath,
 } from './environment-endpoints'
 
 export class BridgeRequestError extends Error {
@@ -83,9 +95,43 @@ export function createHttpEnvironmentClient(
       )
     },
 
+    async requestConfirmToken(environmentId, action) {
+      return requestJson<ConfirmTokenReceipt>(
+        `${options.baseUrl}${postConfirmTokenPath()}`,
+        diagnostics,
+        requestTimeoutMs,
+        {
+          method: 'POST',
+          headers: resolveHeaders(),
+          body: JSON.stringify({ environmentId, action }),
+        },
+      )
+    },
+
+    async startInstaller(environmentId: EnvironmentId) {
+      return requestJson<ActionReceipt>(
+        `${options.baseUrl}${postInstallerStartPath()}`,
+        diagnostics,
+        requestTimeoutMs,
+        {
+          method: 'POST',
+          headers: resolveHeaders(),
+          body: JSON.stringify({ environmentId }),
+        },
+      )
+    },
+
     async getOperation(environmentId: EnvironmentId, operationId: string) {
       return requestJson<OperationSnapshot>(
         `${options.baseUrl}${getOperationPath(environmentId, operationId)}`,
+        diagnostics,
+        requestTimeoutMs,
+      )
+    },
+
+    async getInstallerOperation(operationId: string) {
+      return requestJson<OperationSnapshot>(
+        `${options.baseUrl}${getInstallerOperationPath(operationId)}`,
         diagnostics,
         requestTimeoutMs,
       )
@@ -99,6 +145,38 @@ export function createHttpEnvironmentClient(
       )
       diagnostics.diagnosticsSummary = summary
       return summary
+    },
+
+    async getEnvironmentReport() {
+      return requestJson<EnvironmentReport>(
+        `${options.baseUrl}${getEnvironmentReportPath()}`,
+        diagnostics,
+        requestTimeoutMs,
+      )
+    },
+
+    async getBoundaryReport() {
+      return requestJson<BoundarySelfCheckReport>(
+        `${options.baseUrl}${getBoundaryReportPath()}`,
+        diagnostics,
+        requestTimeoutMs,
+      )
+    },
+
+    async getDeleteReport() {
+      return requestJson<DeleteResultReport | null>(
+        `${options.baseUrl}${getDeleteReportPath()}`,
+        diagnostics,
+        requestTimeoutMs,
+      )
+    },
+
+    async exportSupportBundle() {
+      return requestJson<SupportBundleExport>(
+        `${options.baseUrl}${getDiagnosticsExportPath()}`,
+        diagnostics,
+        requestTimeoutMs,
+      )
     },
 
     getDiagnostics() {

@@ -1,10 +1,15 @@
 import type {
   ActionReceipt,
   ActionRequest,
+  BoundarySelfCheckReport,
+  ConfirmTokenReceipt,
+  DeleteResultReport,
   DiagnosticsSummary,
   EnvironmentId,
+  EnvironmentReport,
   EnvironmentSnapshot,
   OperationSnapshot,
+  SupportBundleExport,
 } from '../contracts/environment'
 import { resolveBootstrap } from './bootstrap'
 import type {
@@ -38,7 +43,7 @@ export function createBrowserEnvironmentClient(): EnvironmentClient {
     diagnosticsSummary: bootstrapResult.ok
       ? null
       : createLocalDiagnosticsSummary({
-          conclusion: '启动信息无效，无法建立到本地安全组件的受信连接。',
+          conclusion: '启动信息无效，无法建立到本地 bridge 的受信连接。',
           recommendedNextStep: '重新启动应用或重新建立连接后再试。',
           retryable: false,
           code: bootstrapResult.code,
@@ -68,23 +73,32 @@ export function createBrowserEnvironmentClient(): EnvironmentClient {
     return httpClient
   }
 
+  const maybeFallback = async <T>(
+    task: (client: EnvironmentClient) => Promise<T>,
+    mockTask: () => Promise<T>,
+  ) => {
+    const client = ensureBridgeAvailable()
+    try {
+      const value = await task(client)
+      syncDiagnostics(client, diagnostics)
+      return value
+    } catch (error) {
+      if (allowMockFallback && isUnavailableFailure(error)) {
+        setMockFallbackDiagnostics(error, diagnostics)
+        return mockTask()
+      }
+
+      syncDiagnostics(client, diagnostics)
+      throw error
+    }
+  }
+
   return {
     async getSnapshot(environmentId: EnvironmentId): Promise<EnvironmentSnapshot> {
-      const client = ensureBridgeAvailable()
-
-      try {
-        const snapshot = await client.getSnapshot(environmentId)
-        syncDiagnostics(client, diagnostics)
-        return snapshot
-      } catch (error) {
-        if (allowMockFallback && isUnavailableFailure(error)) {
-          setMockFallbackDiagnostics(error, diagnostics)
-          return mockClient.getSnapshot(environmentId)
-        }
-
-        syncDiagnostics(client, diagnostics)
-        throw error
-      }
+      return maybeFallback(
+        (client) => client.getSnapshot(environmentId),
+        () => mockClient.getSnapshot(environmentId),
+      )
     },
 
     async postAction(request: ActionRequest): Promise<ActionReceipt> {
@@ -93,14 +107,34 @@ export function createBrowserEnvironmentClient(): EnvironmentClient {
       }
 
       const client = ensureBridgeAvailable()
-      try {
-        const receipt = await client.postAction(request)
-        syncDiagnostics(client, diagnostics)
-        return receipt
-      } catch (error) {
-        syncDiagnostics(client, diagnostics)
-        throw error
+      const receipt = await client.postAction(request)
+      syncDiagnostics(client, diagnostics)
+      return receipt
+    },
+
+    async requestConfirmToken(
+      environmentId: EnvironmentId,
+      action: 'rebuild_environment' | 'delete_environment',
+    ): Promise<ConfirmTokenReceipt> {
+      if (diagnostics.mode === 'mock-fallback') {
+        return mockClient.requestConfirmToken(environmentId, action)
       }
+
+      const client = ensureBridgeAvailable()
+      const receipt = await client.requestConfirmToken(environmentId, action)
+      syncDiagnostics(client, diagnostics)
+      return receipt
+    },
+
+    async startInstaller(environmentId: EnvironmentId): Promise<ActionReceipt> {
+      if (diagnostics.mode === 'mock-fallback') {
+        return mockClient.startInstaller!(environmentId)
+      }
+
+      const client = ensureBridgeAvailable()
+      const receipt = await client.startInstaller(environmentId)
+      syncDiagnostics(client, diagnostics)
+      return receipt
     },
 
     async getOperation(
@@ -113,6 +147,17 @@ export function createBrowserEnvironmentClient(): EnvironmentClient {
 
       const client = ensureBridgeAvailable()
       const operation = await client.getOperation(environmentId, operationId)
+      syncDiagnostics(client, diagnostics)
+      return operation
+    },
+
+    async getInstallerOperation(operationId: string): Promise<OperationSnapshot> {
+      if (diagnostics.mode === 'mock-fallback') {
+        return mockClient.getInstallerOperation!(operationId)
+      }
+
+      const client = ensureBridgeAvailable()
+      const operation = await client.getInstallerOperation(operationId)
       syncDiagnostics(client, diagnostics)
       return operation
     },
@@ -131,6 +176,50 @@ export function createBrowserEnvironmentClient(): EnvironmentClient {
       syncDiagnostics(client, diagnostics)
       diagnostics.diagnosticsSummary = summary
       return summary
+    },
+
+    async getEnvironmentReport(): Promise<EnvironmentReport> {
+      if (diagnostics.mode === 'mock-fallback') {
+        return mockClient.getEnvironmentReport!()
+      }
+
+      const client = ensureBridgeAvailable()
+      const report = await client.getEnvironmentReport!()
+      syncDiagnostics(client, diagnostics)
+      return report
+    },
+
+    async getBoundaryReport(): Promise<BoundarySelfCheckReport> {
+      if (diagnostics.mode === 'mock-fallback') {
+        return mockClient.getBoundaryReport!()
+      }
+
+      const client = ensureBridgeAvailable()
+      const report = await client.getBoundaryReport!()
+      syncDiagnostics(client, diagnostics)
+      return report
+    },
+
+    async getDeleteReport(): Promise<DeleteResultReport | null> {
+      if (diagnostics.mode === 'mock-fallback') {
+        return mockClient.getDeleteReport!()
+      }
+
+      const client = ensureBridgeAvailable()
+      const report = await client.getDeleteReport!()
+      syncDiagnostics(client, diagnostics)
+      return report
+    },
+
+    async exportSupportBundle(): Promise<SupportBundleExport> {
+      if (diagnostics.mode === 'mock-fallback') {
+        return mockClient.exportSupportBundle!()
+      }
+
+      const client = ensureBridgeAvailable()
+      const bundle = await client.exportSupportBundle!()
+      syncDiagnostics(client, diagnostics)
+      return bundle
     },
 
     getDiagnostics() {
@@ -181,8 +270,8 @@ function setMockFallbackDiagnostics(
     retryable: true,
   }
   diagnostics.diagnosticsSummary = createLocalDiagnosticsSummary({
-    conclusion: '当前未连接到本地安全组件，页面已回退到演示数据。',
-    recommendedNextStep: '启动本地安全组件后重试连接。',
+    conclusion: '当前未连接到本地 bridge，页面已回退到演示数据。',
+    recommendedNextStep: '启动本地 bridge 后重试连接。',
     retryable: true,
     code: 'bridge_unavailable',
   })
@@ -205,12 +294,15 @@ function createLocalDiagnosticsSummary(input: {
       port: 0,
       generation: 0,
       runtimeLocation: 'unknown',
+      mode: 'dev',
+      isMock: true,
       lastFailure: {
         stage: 'bridge_connection',
         type: 'unknown',
         code: input.code,
         occurredAt: new Date().toISOString(),
       },
+      recentCommands: [],
     },
   }
 }

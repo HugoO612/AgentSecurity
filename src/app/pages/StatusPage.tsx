@@ -1,4 +1,5 @@
 import { copy } from '../../copy'
+import { createDiagnosticsText } from '../../api/environment-adapter'
 import { PageScaffold } from '../../components/PageScaffold'
 import { StatusBadge } from '../../components/StatusBadge'
 import { actionLabelKeys, getActionConfirmationModal } from '../../domain/actions'
@@ -10,7 +11,7 @@ import type { EnvironmentAction } from '../../domain/types'
 
 export function StatusPage() {
   const navigate = useNavigate()
-  const { snapshot, state, derived, runAction, refreshSnapshot } = useEnvironment()
+  const { snapshot, state, derived, runAction, refreshSnapshot, exportSupportBundle } = useEnvironment()
   const { setActiveModal, pushNotice } = useUiState()
   const primaryAction = derived.recommendedAction
 
@@ -81,8 +82,8 @@ export function StatusPage() {
           </div>
           <div className="metric-card">
             <p className="eyebrow">{copy('COPY_LABEL_RUNTIME_LOCATION')}</p>
-            <h3>{copy('COPY_ENTRY_LOCAL_TITLE')}</h3>
-            <p>{copy('COPY_DESC_SCOPE')}</p>
+            <h3>{snapshot.runtime.distroName ?? copy('COPY_ENTRY_LOCAL_TITLE')}</h3>
+            <p>{snapshot.runtime.installationLocationSummary ?? copy('COPY_DESC_SCOPE')}</p>
           </div>
           <div className="metric-card">
             <p className="eyebrow">{copy('COPY_LABEL_LAST_OPERATION')}</p>
@@ -96,6 +97,7 @@ export function StatusPage() {
                     delete_environment: copy(actionLabelKeys.delete_environment),
                     retry_install: copy(actionLabelKeys.retry_install),
                     install_environment: copy('COPY_BTN_START_INSTALL'),
+                    installer: copy('COPY_BTN_START_INSTALL'),
                     run_precheck: copy('COPY_TITLE_PRECHECK'),
                     request_permission: copy('COPY_TITLE_CONFIRM_PERMISSION'),
                   }[snapshot.diagnostics.supportSummary.lastOperation.action] ??
@@ -104,6 +106,18 @@ export function StatusPage() {
             </h3>
             <p>{new Date(snapshot.updatedAt).toLocaleString('zh-CN')}</p>
           </div>
+          <div className="metric-card">
+            <p className="eyebrow">最近健康检查</p>
+            <h3>{snapshot.health.lastCheckedAt ? new Date(snapshot.health.lastCheckedAt).toLocaleString('zh-CN') : '尚无记录'}</h3>
+            <p>{snapshot.health.status}</p>
+          </div>
+        </article>
+
+        <article className="content-card">
+          <p className="eyebrow">隔离边界</p>
+          <h3>{snapshot.runtime.isolationBoundarySummary ?? '当前使用隔离环境运行。'}</h3>
+          <p>{snapshot.runtime.windowsHostWritesSummary}</p>
+          <p>Windows 主环境未被直接用于运行。</p>
         </article>
 
         {snapshot.failure ? (
@@ -177,6 +191,27 @@ export function StatusPage() {
               onClick={() => pushNotice(snapshot.diagnostics.userSummary.recommendedNextStep)}
             >
               {copy('COPY_BTN_VIEW_FIX_INSTRUCTIONS')}
+            </button>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={async () => {
+                const bundle = await exportSupportBundle()
+                await navigator.clipboard.writeText(JSON.stringify(bundle, null, 2))
+                pushNotice('诊断包已导出并复制。')
+              }}
+            >
+              导出诊断
+            </button>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={async () => {
+                await navigator.clipboard.writeText(createDiagnosticsText(snapshot.diagnostics))
+                pushNotice(copy('COPY_NOTICE_DIAGNOSTICS_COPIED'))
+              }}
+            >
+              查看日志摘要
             </button>
           </div>
         </article>
