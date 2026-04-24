@@ -3,7 +3,7 @@
 Release: v1.0.0-local
 Date: 2026-04-24
 Owner: Hugo
-Commit: TO_BE_FILLED_AFTER_RELEASE_COMMIT
+Commit: f4bd194
 
 ## Build and Test
 
