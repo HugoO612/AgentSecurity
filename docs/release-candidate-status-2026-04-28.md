@@ -33,6 +33,14 @@ Decision: `GO`
 - `delete_failure`: validated
 - `wsl_disabled`, `reboot_interrupted`, and `startup_failure`: documented recovery guidance linked from evidence
 
+## Boundary And Recovery Evidence
+
+- Runtime boundary: the agent runs only inside the dedicated `AgentSecurity` isolated environment
+- Host write boundary: expected Windows-side writes are limited to controlled AgentSecurity paths under `%LOCALAPPDATA%\\AgentSecurity\\v2\\`
+- Recovery surface: `stop`, `rebuild`, and `delete` are the supported control and rollback actions
+- Delete evidence: the dedicated environment is absent after delete, while controlled diagnostics and reports remain for support
+- User-facing boundary docs: `README.md`, `docs/safety-boundary.md`, `docs/install-guide.md`, `docs/uninstall.md`, and `docs/support-guide.md`
+
 ## Bundled Assets
 
 - Rootfs: `bridge/assets/agent-security-rootfs.tar`

@@ -1,6 +1,18 @@
 # Agent Security v1 Local Edition
 
-AgentSecurity v1 is a Windows-only local product that installs and runs the agent inside a dedicated WSL2 runtime on the same machine.
+AgentSecurity v1 Local Edition is the supported local Windows release for users who need the agent to stay on the same machine. It uses a dedicated WSL2 runtime boundary instead of direct host installation.
+
+## Recommended Path
+
+For local Windows use, the recommended path is the dedicated WSL2 isolated route used by this release.
+
+This Local Edition is still a limited recommendation path:
+- recommended for users who specifically need local execution on Windows
+- not a blanket default for every ordinary user or every future deployment mode
+- not a direct-host install path
+- not a user-managed Ubuntu reuse path
+
+Users who want the lowest ongoing local setup burden should use the isolated local path only if they need local execution. A future cloud-hosted managed option remains the better fit for users who prefer remote isolation over local subsystem setup.
 
 ## Install For Regular Users
 
@@ -13,6 +25,15 @@ AgentSecurity v1 is a Windows-only local product that installs and runs the agen
 If Windows says WSL2 is not enabled, enable or install WSL2, reboot if prompted, then run the installer again. If installation is interrupted by reboot, rerun the installer after Windows starts. If the agent does not start, retry start first, then use rebuild or delete and reinstall.
 
 AgentSecurity v1 has verified the main install/start/stop/rebuild/delete lifecycle and covers critical failure scenarios. Some system-level boundary cases, including WSL not enabled, reboot interruption, and agent startup failure, provide explicit recovery guidance; later versions will continue improving automatic recovery.
+
+## Safety Boundary
+
+- The agent runs only inside the dedicated `AgentSecurity` WSL2 distro.
+- The release does not install the agent directly into the Windows host runtime.
+- Expected Windows-side writes are limited to controlled AgentSecurity paths under `%LOCALAPPDATA%\\AgentSecurity\\v2\\`.
+- Administrator permission is only required when Windows must enable the subsystem features needed for the isolated environment path.
+- `stop`, `rebuild`, and `delete` are the supported control and rollback paths.
+- Delete keeps controlled diagnostics and reports, and should not leave runtime state outside controlled AgentSecurity paths.
 
 Public v1 scope is fixed:
 - Windows only
@@ -51,6 +72,7 @@ Current release status:
 ## Formal Docs
 
 - [Formal Install Guide](docs/install-guide.md)
+- [Safety Boundary](docs/safety-boundary.md)
 - [Risk Explanation](docs/risk-explanation.md)
 - [Uninstall Guide](docs/uninstall.md)
 - [Recovery Guide](docs/recovery-guide.md)

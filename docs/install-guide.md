@@ -13,11 +13,15 @@ The formal release does not:
 - reuse an existing Ubuntu distro
 - support custom distro names or custom install targets
 
+This is the recommended local path for Windows users who need local execution. It is not a direct-host install path and it is not the promised fit for every future user segment.
+
 ## Before You Start
 
 - The app may request administrator permission if WSL features must be enabled.
 - The machine may need to reboot before install can continue.
 - A normal install or rebuild can take several minutes depending on WSL setup and machine speed.
+- The expected Windows-side write scope is limited to controlled AgentSecurity paths under `%LOCALAPPDATA%\\AgentSecurity\\v2\\`.
+- The supported rollback paths are `stop`, `rebuild`, and `delete`.
 
 ## Install Flow
 
@@ -39,6 +43,20 @@ The formal release does not:
 - Installs the bundled agent artifact and writes runtime config.
 - Starts the runtime and runs initial health check.
 - Emits install summary and reports.
+
+## Host Boundary
+
+What it can change on the Windows host:
+- controlled runtime state
+- controlled diagnostics
+- controlled reports
+- dedicated distro install root
+
+What it should not do in the public release path:
+- run the agent directly in the Windows host runtime
+- reuse a user-managed Ubuntu environment
+- write agent runtime files into arbitrary user folders
+- skip bundled artifact checksum verification
 
 ## What Installer Does Not Do
 

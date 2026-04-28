@@ -38,3 +38,15 @@ The support bundle must not contain:
 - uncontrolled host paths
 
 Redacted markers are expected in the exported data.
+
+## Beginner Recovery Summary
+
+Ordinary users should follow this order:
+- `retry` if the failure looked temporary
+- `rebuild` if install or startup left the local environment inconsistent
+- `delete` if the goal is full removal or a clean reinstall
+
+Ordinary users should stop and ask for help if:
+- checksum mismatch is shown
+- delete says it finished but the dedicated environment is still present
+- the product reports writes outside controlled AgentSecurity paths

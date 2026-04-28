@@ -8,6 +8,7 @@ const requiredFiles = [
   'docs/release-evidence-template.json',
   'docs/release-checklist.md',
   'docs/release-notes-v1.0.0-local.md',
+  'docs/safety-boundary.md',
   'docs/install-guide.md',
   'docs/risk-explanation.md',
   'docs/uninstall.md',
