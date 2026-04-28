@@ -31,6 +31,7 @@ const baseConfig: BridgeConfig = {
   ],
   installerDownloadUrl: 'bundled://agent-security-agent.pkg',
   installerChecksum: '0123456789abcdef',
+  bundledRootfsChecksum: 'abcdef0123456789',
   bundledRootfsPath: 'C:\\AgentSecurity\\bundled\\agent-security-rootfs.tar',
   bundledAgentArtifactPath: 'C:\\AgentSecurity\\bundled\\agent-security-agent.pkg',
 }
@@ -89,34 +90,18 @@ describe('bridge action planning', () => {
     if ('error' in install) {
       throw new Error('expected install success')
     }
-    expect(install.finalSnapshot.installation.state).toBe('ready')
+    expect(install.finalSnapshot.installation.state).toBe('running')
     expect(install.finalSnapshot.runtime.distroName).toBe('AgentSecurity')
     expect(install.finalSnapshot.commandAudits?.every((audit) => audit.executor === 'live')).toBe(true)
-
-    const start = await planActionExecution(
-      {
-        environmentId: initial.environmentId,
-        action: 'start_agent',
-        requestId: 'start-test',
-        expectedGeneration: install.finalSnapshot.generation,
-      },
-      install.finalSnapshot,
-      baseConfig,
-    )
-    expect('error' in start).toBe(false)
-    if ('error' in start) {
-      throw new Error('expected start success')
-    }
-    expect(start.finalSnapshot.installation.state).toBe('running')
 
     const stop = await planActionExecution(
       {
         environmentId: initial.environmentId,
         action: 'stop_agent',
         requestId: 'stop-test',
-        expectedGeneration: start.finalSnapshot.generation,
+        expectedGeneration: install.finalSnapshot.generation,
       },
-      start.finalSnapshot,
+      install.finalSnapshot,
       baseConfig,
     )
     expect('error' in stop).toBe(false)
@@ -125,22 +110,38 @@ describe('bridge action planning', () => {
     }
     expect(stop.finalSnapshot.installation.state).toBe('stopped')
 
+    const start = await planActionExecution(
+      {
+        environmentId: initial.environmentId,
+        action: 'start_agent',
+        requestId: 'start-test',
+        expectedGeneration: stop.finalSnapshot.generation,
+      },
+      stop.finalSnapshot,
+      baseConfig,
+    )
+    expect('error' in start).toBe(false)
+    if ('error' in start) {
+      throw new Error('expected start success')
+    }
+    expect(start.finalSnapshot.installation.state).toBe('running')
+
     const rebuild = await planActionExecution(
       {
         environmentId: initial.environmentId,
         action: 'rebuild_environment',
         requestId: 'rebuild-test',
-        expectedGeneration: stop.finalSnapshot.generation,
+        expectedGeneration: start.finalSnapshot.generation,
       },
-      stop.finalSnapshot,
+      start.finalSnapshot,
       baseConfig,
     )
     expect('error' in rebuild).toBe(false)
     if ('error' in rebuild) {
       throw new Error('expected rebuild success')
     }
-    expect(rebuild.finalSnapshot.installation.state).toBe('ready')
-    expect(rebuild.finalSnapshot.generation).toBe(stop.finalSnapshot.generation + 1)
+    expect(rebuild.finalSnapshot.installation.state).toBe('running')
+    expect(rebuild.finalSnapshot.generation).toBe(start.finalSnapshot.generation + 1)
 
     const del = await planActionExecution(
       {
@@ -243,7 +244,7 @@ describe('bridge action planning', () => {
     if ('error' in retry) {
       throw new Error('expected retry success')
     }
-    expect(retry.finalSnapshot.installation.state).toBe('ready')
+    expect(retry.finalSnapshot.installation.state).toBe('running')
     expect(calls.some((call) => call.includes('--import'))).toBe(false)
   })
 
@@ -258,7 +259,7 @@ describe('bridge action planning', () => {
       }
 
       const joined = args.join(' ')
-      if (joined.includes('health_check') || joined.includes('echo healthy')) {
+      if (joined.includes('Get-Process') || joined.includes('health_check')) {
         return {
           exitCode: 1,
           stdout: '',
@@ -310,5 +311,41 @@ describe('bridge action planning', () => {
     expect(start.finalSnapshot.recovery?.availableActions).toEqual(
       expect.arrayContaining(['rebuild', 'delete', 'export_support_bundle']),
     )
+  })
+
+  it('maps denied elevation helper results to permission_denied', async () => {
+    setCommandExecutorForTests(async (program, args) => {
+      expect(program).toBe('powershell.exe')
+      expect(args.join(' ')).toContain('elevation denied')
+      return {
+        exitCode: 1223,
+        stdout: '',
+        stderr: 'elevation denied',
+      }
+    })
+
+    const snapshot = createInitialSnapshot(baseConfig)
+    const permission = await planActionExecution(
+      {
+        environmentId: snapshot.environmentId,
+        action: 'request_permission',
+        requestId: 'permission-denied-test',
+        expectedGeneration: snapshot.generation,
+      },
+      snapshot,
+      {
+        ...baseConfig,
+        elevationHelperCommand: 'Write-Error "elevation denied"; exit 1223',
+      },
+    )
+
+    expect('error' in permission).toBe(false)
+    if ('error' in permission) {
+      throw new Error('expected planned permission failure snapshot')
+    }
+    expect(permission.finalRecord.status).toBe('failed')
+    expect(permission.finalRecord.error?.code).toBe('permission_denied')
+    expect(permission.finalSnapshot.failure?.code).toBe('permission_denied')
+    expect(permission.finalSnapshot.installation.state).toBe('not-installed')
   })
 })

@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.0-local (Unreleased)
+## v1.0.0-local (2026-04-28)
 
 ### Scope
 
@@ -19,7 +19,9 @@
 
 ### Verification
 
-- `npm run lint` passed (1 non-blocking warning).
-- `npm test` passed (12 files / 36 tests).
+- `node scripts/validate-release-candidate.mjs --evidence docs/release-evidence-2026-04-28-live.json` passed.
+- `npm run lint` passed.
+- `npm test` passed (17 files / 53 tests).
 - `npm run build` passed.
-- Real-machine lifecycle and failure-path verification: pending.
+- Live lifecycle verification passed for install, start, stop, rebuild, and delete.
+- Blocking exception verification passed for permission denied, artifact missing, checksum mismatch, and delete failure.

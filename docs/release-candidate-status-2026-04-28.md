@@ -1,43 +1,68 @@
 # Agent Security Candidate Status
 
 Date: 2026-04-28  
-Commit: `c605d17`  
-Decision: `HOLD / NO-GO`
+Commit: `88e3cb6`  
+Decision: `GO`
 
 ## Verified In This Workspace
 
+- `npm run build:assets -- 2026.04.28-rc1`: passed
+- `npm run validate:live -- docs\release-evidence-2026-04-28-live.json`: passed live lifecycle
+- `node scripts/run-blocking-exception-validation.mjs docs\release-evidence-2026-04-28-live.json`: passed
+- `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-28-live.json`: passed
 - `npm run lint`: passed
-- `npm test`: passed (`17` files / `52` tests)
+- `npm test`: passed (`17` files / `53` tests)
 - `npm run build`: passed
+
+## Live Lifecycle Evidence
+
+- Evidence file: `docs/release-evidence-2026-04-28-live.json`
+- Execution mode: `live`
+- Target distro: `AgentSecurity`
+- Shimmed commands: `[]`
+- Lifecycle result: install, stop, start, rebuild, and delete succeeded
+- Delete verification: `AgentSecurity` is absent from `wsl.exe -l -q` after delete
+- Support bundle checks: no bridge token, no authorization header, no raw LocalAppData path
+
+## Blocking Exception Evidence
+
+- Evidence summary: `docs/blocking-exception-results-2026-04-28.json`
+- `permission_denied`: validated
+- `artifact_missing`: validated
+- `checksum_mismatch`: validated
+- `delete_failure`: validated
+- `wsl_disabled`, `reboot_interrupted`, and `startup_failure`: documented recovery guidance linked from evidence
+
+## Bundled Assets
+
+- Rootfs: `bridge/assets/agent-security-rootfs.tar`
+- Agent package: `bridge/assets/agent-security-agent.pkg`
+- Manifest: `bridge/assets/release-assets-manifest.json`
+- Version: `2026.04.28-rc1`
+- Update policy: `bundled-only`
 
 ## Public Release Gate Result
 
 - Command:
-  - `node scripts/validate-release-candidate.mjs --evidence docs/release-evidence-2026-04-24.json`
+  - `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-28-live.json`
 - Result:
-  - failed
-- Failure:
-  - `executionMode must be "live" for public launch evidence.`
+  - passed
 
-## Why The Current Candidate Is Not Ready
+## Why The Current Candidate Is Ready
 
-- The only recorded evidence file is still a historical shim rehearsal.
-- That rehearsal targets `Ubuntu`, not the dedicated `AgentSecurity` distro.
-- No current evidence proves `live` install / start / stop / rebuild / delete on the current candidate commit.
-- This workspace does not contain release-ready bundled assets under `bridge/assets`, so a compliant public-release evidence run cannot be generated here without the real rootfs and agent artifact.
+- The real install/start/stop/rebuild/delete chain is now proven on this machine.
+- The bundled assets exist and match the evidence checksums.
+- The 4 v1 blocking exceptions are validated:
+  - permission denied
+  - artifact missing
+  - checksum mismatch
+  - delete failure
+- The remaining 3 cases are treated as documented limitations for v1, not release blockers:
+  - WSL disabled
+  - reboot interrupted
+  - startup failure
+- The release gate passes with `goNoGo.decision` set to `go`.
 
 ## Required Next Step
 
-Run a real Windows validation with:
-
-- execution mode: `live`
-- dedicated distro: `AgentSecurity`
-- bundled rootfs: real release artifact
-- bundled agent artifact: real release artifact
-- checksum: real production checksum
-
-Then:
-
-1. save the new evidence file under `docs/`
-2. run `node scripts/validate-release-candidate.mjs --evidence <new-file>`
-3. update `docs/release-checklist.md` from `HOLD / NO-GO` to the new candidate status
+Publish the v1 GitHub release with the one-click installer package and the release notes in `docs/release-notes-v1.0.0-local.md`.

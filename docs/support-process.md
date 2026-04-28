@@ -1,5 +1,7 @@
 # Agent Security Support Process
 
+This document is for internal support and release triage. End-user guidance lives in `docs/support-guide.md`.
+
 ## Intake
 
 Collect:

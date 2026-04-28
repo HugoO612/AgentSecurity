@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -21,7 +22,15 @@ describe('release candidate validation script', () => {
   it('accepts a live AgentSecurity evidence file', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'agent-security-evidence-'))
     tempDirs.push(dir)
+    const assetRoot = join(dir, 'assets')
+    const rootfsPath = join(assetRoot, 'agent-security-rootfs.tar')
+    const agentPath = join(assetRoot, 'agent-security-agent.pkg')
     const evidencePath = join(dir, 'valid-evidence.json')
+    const rootfsContent = 'rootfs'
+    const agentContent = 'agent'
+    await mkdir(assetRoot)
+    await writeFile(rootfsPath, rootfsContent, 'utf8')
+    await writeFile(agentPath, agentContent, 'utf8')
 
     await writeFile(
       evidencePath,
@@ -35,9 +44,43 @@ describe('release candidate validation script', () => {
           executionMode: 'live',
           targetDistro: 'AgentSecurity',
           bundledArtifacts: {
-            rootfs: 'rootfs.tar',
-            agent: 'agent.pkg',
-            checksum: '0123456789abcdef',
+            rootfs: rootfsPath,
+            agent: agentPath,
+            checksums: {
+              rootfsSha256: createHash('sha256').update(rootfsContent).digest('hex'),
+              agentSha256: createHash('sha256').update(agentContent).digest('hex'),
+            },
+            version: '2026.04.28-rc1',
+            source: 'release-pipeline',
+            updatePolicy: 'bundled-only',
+          },
+          exceptionMatrix: {
+            blocking: {
+              permission_denied: { required: true, status: 'validated' },
+              artifact_missing: { required: true, status: 'validated' },
+              checksum_mismatch: { required: true, status: 'validated' },
+              delete_failure: { required: true, status: 'validated' },
+            },
+            documentedLimitations: {
+              wsl_disabled: {
+                required: false,
+                status: 'documented',
+                documentationReference: 'docs/exception-matrix-validation.md#wsl_disabled',
+                recoverySummary: 'Enable Windows subsystem support and rerun precheck.',
+              },
+              reboot_interrupted: {
+                required: false,
+                status: 'documented',
+                documentationReference: 'docs/exception-matrix-validation.md#reboot_interrupted',
+                recoverySummary: 'Reopen the installer after reboot and resume.',
+              },
+              startup_failure: {
+                required: false,
+                status: 'documented',
+                documentationReference: 'docs/exception-matrix-validation.md#startup_failure',
+                recoverySummary: 'Use retry, rebuild, or delete and reinstall.',
+              },
+            },
           },
           lifecycle: [
             { action: 'install', finalStatus: 'succeeded', afterState: 'ready' },
@@ -46,10 +89,79 @@ describe('release candidate validation script', () => {
             { action: 'rebuild_environment', finalStatus: 'succeeded', afterState: 'ready' },
             { action: 'delete_environment', finalStatus: 'succeeded', afterState: 'not-installed' },
           ],
+          exceptionValidation: [
+            {
+              case: 'permission_denied',
+              triggerMethod: 'deny elevation prompt on controlled test host',
+              errorCode: 'permission_denied',
+              userVisibleMessage: 'permission denied',
+              recommendedRecovery: 'request permission',
+              actualRecoveryResult: 'recovered',
+              evidence: 'permission-denied-log',
+            },
+            {
+              case: 'wsl_disabled',
+              triggerMethod: 'disable WSL optional feature on controlled test host',
+              errorCode: 'wsl_not_enabled',
+              userVisibleMessage: 'wsl disabled',
+              recommendedRecovery: 'enable wsl',
+              actualRecoveryResult: 'documented only',
+              evidence: 'documentation-only',
+              documentationReference: 'docs/exception-matrix-validation.md#wsl_disabled',
+            },
+            {
+              case: 'reboot_interrupted',
+              triggerMethod: 'interrupt reboot resume after WSL feature enablement',
+              errorCode: 'reboot_required',
+              userVisibleMessage: 'reboot required',
+              recommendedRecovery: 'reboot',
+              actualRecoveryResult: 'documented only',
+              evidence: 'documentation-only',
+              documentationReference: 'docs/exception-matrix-validation.md#reboot_interrupted',
+            },
+            {
+              case: 'artifact_missing',
+              triggerMethod: 'remove bundled agent artifact before install',
+              errorCode: 'install_download_failed',
+              userVisibleMessage: 'artifact missing',
+              recommendedRecovery: 'restore bundle',
+              actualRecoveryResult: 'recovered',
+              evidence: 'artifact-missing-log',
+            },
+            {
+              case: 'checksum_mismatch',
+              triggerMethod: 'set mismatched bundled agent SHA256',
+              errorCode: 'artifact_invalid',
+              userVisibleMessage: 'checksum mismatch',
+              recommendedRecovery: 'replace artifact',
+              actualRecoveryResult: 'recovered',
+              evidence: 'checksum-mismatch-log',
+            },
+            {
+              case: 'startup_failure',
+              triggerMethod: 'replace agent start script with failing script',
+              errorCode: 'agent_start_failed',
+              userVisibleMessage: 'startup failed',
+              recommendedRecovery: 'rebuild',
+              actualRecoveryResult: 'documented only',
+              evidence: 'documentation-only',
+              documentationReference: 'docs/exception-matrix-validation.md#startup_failure',
+            },
+            {
+              case: 'delete_failure',
+              triggerMethod: 'lock distro VHD during delete on controlled host',
+              errorCode: 'delete_failed',
+              userVisibleMessage: 'delete failed',
+              recommendedRecovery: 'retry delete',
+              actualRecoveryResult: 'recovered',
+              evidence: 'delete-failure-log',
+            },
+          ],
           residualItems: {
             remainingWindowsPaths: ['C:\\AgentSecurity\\v2\\diagnostics'],
             removedWindowsPaths: ['C:\\AgentSecurity\\v2\\runtime'],
             distroPresentAfterDelete: false,
+            logsRetainedForSupport: ['C:\\AgentSecurity\\v2\\reports'],
             unexpectedResidue: [],
           },
           supportBundleChecks: {
@@ -70,10 +182,38 @@ describe('release candidate validation script', () => {
       'utf8',
     )
 
+    const manifestPath = join(assetRoot, 'release-assets-manifest.json')
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify(
+        {
+          version: '2026.04.28-rc1',
+          sourceCommit: 'abc123',
+          updatePolicy: 'bundled-only',
+          artifacts: {
+            rootfs: {
+              path: 'bridge/assets/agent-security-rootfs.tar',
+              sha256: createHash('sha256').update(rootfsContent).digest('hex'),
+            },
+            agent: {
+              path: 'bridge/assets/agent-security-agent.pkg',
+              sha256: createHash('sha256').update(agentContent).digest('hex'),
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    )
+
     const { stdout } = await execFileAsync(
       'node',
       ['scripts/validate-release-candidate.mjs', '--evidence', evidencePath],
-      { cwd: 'A:\\AgentSecurity' },
+      {
+        cwd: 'A:\\AgentSecurity',
+        env: { ...process.env, AGENT_SECURITY_RELEASE_ASSET_ROOT: assetRoot },
+      },
     )
 
     expect(stdout).toContain('Release candidate evidence passed live gating checks.')

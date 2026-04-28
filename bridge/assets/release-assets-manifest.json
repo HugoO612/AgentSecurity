@@ -1,0 +1,18 @@
+{
+  "version": "2026.04.28-rc1",
+  "generatedAt": "2026-04-28T10:18:57.759Z",
+  "source": "scripts/build-release-assets.mjs using WSL Ubuntu static busybox",
+  "sourceCommit": "88e3cb6",
+  "packageFormat": "agent-security-tar-pkg-v1",
+  "updatePolicy": "bundled-only",
+  "artifacts": {
+    "rootfs": {
+      "path": "bridge/assets/agent-security-rootfs.tar",
+      "sha256": "c8393f681033d6b41cf3ca0b8863193fd6dd3fd3efbd7808faf79ff55b5a9159"
+    },
+    "agent": {
+      "path": "bridge/assets/agent-security-agent.pkg",
+      "sha256": "c96935f893a0235af6fb6cafa1962212b153ff8a9c6f51bd30bbe7fd8997e6c0"
+    }
+  }
+}

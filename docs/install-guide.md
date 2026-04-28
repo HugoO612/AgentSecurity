@@ -1,31 +1,43 @@
 # Agent Security Formal Install Guide
 
-## Prerequisites
+## Scope
 
-- Windows machine with local isolation capability available.
-- Local controlled bridge can be started successfully.
-- Bundled rootfs and bundled agent artifact are present in the candidate package.
-- Candidate build is configured for the dedicated `AgentSecurity` distro only.
+This guide applies only to the formal Windows release path:
+- Windows only
+- WSL2 only
+- dedicated `AgentSecurity` distro only
+- bundled rootfs and bundled agent artifact only
+
+The formal release does not:
+- install into the Windows host runtime
+- reuse an existing Ubuntu distro
+- support custom distro names or custom install targets
+
+## Before You Start
+
+- The app may request administrator permission if WSL features must be enabled.
+- The machine may need to reboot before install can continue.
+- A normal install or rebuild can take several minutes depending on WSL setup and machine speed.
 
 ## Install Flow
 
-1. Open app and select local isolated run mode.
-2. Confirm preinstall scope.
-3. Run precheck and resolve blocked items.
-4. Click start install.
-5. Wait for installer stages to complete.
-6. Open install complete page and choose:
-- `start`
-- `rebuild`
-- `uninstall`
+1. Open the app and load the current environment snapshot.
+2. Run precheck.
+3. If the app requests permission, approve the Windows administrator prompt.
+4. If Windows feature enablement requires a reboot, reboot the machine and reopen the app.
+5. Start install.
+6. Wait while the installer:
+   collects facts, enables WSL features when needed, creates the dedicated `AgentSecurity` distro, imports the bundled rootfs, stages the bundled agent artifact, verifies checksum, writes runtime config, starts the agent, and runs health check.
+7. Review the final state and keep the support bundle available in case recovery is needed.
 
 ## What Installer Does
 
 - Collects system facts.
 - Enables required features when needed.
-- Automatically prepares dedicated isolated runtime and distro when missing.
-- Installs bundled agent artifacts and writes runtime config.
-- Starts runtime and runs initial health check.
+- Automatically prepares the dedicated `AgentSecurity` distro when missing.
+- Imports the bundled rootfs.
+- Installs the bundled agent artifact and writes runtime config.
+- Starts the runtime and runs initial health check.
 - Emits install summary and reports.
 
 ## What Installer Does Not Do

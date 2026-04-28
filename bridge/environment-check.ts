@@ -454,12 +454,7 @@ export function buildWindowsCapabilityInvocation(): CommandInvocation {
       [
         '$os = Get-CimInstance Win32_OperatingSystem',
         '$computer = Get-CimInstance Win32_ComputerSystem',
-        '$caps = @{',
-        '  caption = $os.Caption',
-        '  build = $os.BuildNumber',
-        '  version = $os.Version',
-        '  hypervisorPresent = $computer.HypervisorPresent',
-        '}',
+        '$caps = [pscustomobject]@{ caption = $os.Caption; build = $os.BuildNumber; version = $os.Version; hypervisorPresent = $computer.HypervisorPresent }',
         '$caps | ConvertTo-Json -Compress',
       ].join('; '),
     ],

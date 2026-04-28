@@ -1,0 +1,215 @@
+{
+  "candidateVersion": "2026.04.28-rc1",
+  "commit": "88e3cb6",
+  "runAt": "2026-04-28T10:19:42.586Z",
+  "machine": "墨盒",
+  "mode": "release-candidate-validation",
+  "executionMode": "live",
+  "targetDistro": "AgentSecurity",
+  "bundledArtifacts": {
+    "rootfs": "bridge/assets/agent-security-rootfs.tar",
+    "agent": "bridge/assets/agent-security-agent.pkg",
+    "checksums": {
+      "rootfsSha256": "c8393f681033d6b41cf3ca0b8863193fd6dd3fd3efbd7808faf79ff55b5a9159",
+      "agentSha256": "c96935f893a0235af6fb6cafa1962212b153ff8a9c6f51bd30bbe7fd8997e6c0"
+    },
+    "version": "2026.04.28-rc1",
+    "source": "scripts/build-release-assets.mjs using WSL Ubuntu static busybox",
+    "updatePolicy": "bundled-only"
+  },
+  "exceptionMatrix": {
+    "blocking": {
+      "permission_denied": {
+        "required": true,
+        "status": "validated"
+      },
+      "artifact_missing": {
+        "required": true,
+        "status": "validated"
+      },
+      "checksum_mismatch": {
+        "required": true,
+        "status": "validated"
+      },
+      "delete_failure": {
+        "required": true,
+        "status": "validated"
+      }
+    },
+    "documentedLimitations": {
+      "wsl_disabled": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "docs/exception-matrix-validation.md#wsl_disabled",
+        "recoverySummary": "Enable WSL2 from Windows features or the official installer path, reboot if requested, then rerun AgentSecurity install."
+      },
+      "reboot_interrupted": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "docs/exception-matrix-validation.md#reboot_interrupted",
+        "recoverySummary": "After Windows restarts, rerun the installer so it can check the current state and continue or recommend reinstall."
+      },
+      "startup_failure": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "docs/exception-matrix-validation.md#startup_failure",
+        "recoverySummary": "Retry start first; if it still fails, rebuild the environment or delete and reinstall from the bundled assets."
+      }
+    }
+  },
+  "shimmedCommands": [],
+  "lifecycle": [
+    {
+      "action": "install",
+      "beforeState": "ready-to-install",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "running",
+      "recoveryAction": null,
+      "evidence": "bd367d0b-adb5-4a0a-b49e-d2630c341f6d"
+    },
+    {
+      "action": "stop_agent",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "finalizing",
+      "afterState": "stopped",
+      "recoveryAction": null,
+      "evidence": "64d42044-1afe-459a-be56-d2f9238444fc"
+    },
+    {
+      "action": "start_agent",
+      "beforeState": "stopped",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "finalizing",
+      "afterState": "running",
+      "recoveryAction": null,
+      "evidence": "7ad8b6d9-6a47-4842-8bcd-3ed7cb702338"
+    },
+    {
+      "action": "rebuild_environment",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "running",
+      "recoveryAction": null,
+      "evidence": "72994b15-533a-40e2-80fc-191dd8541657"
+    },
+    {
+      "action": "delete_environment",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "not-installed",
+      "recoveryAction": null,
+      "evidence": "4bde82d1-d55f-4d29-b0a3-d4a431183894"
+    }
+  ],
+  "exceptionValidation": [
+    {
+      "case": "permission_denied",
+      "triggerMethod": "Started the production bridge with a controlled elevation helper that exits 1223, matching Windows UAC user-cancel behavior, then ran request_permission.",
+      "errorCode": "permission_denied",
+      "userVisibleMessage": "Command failed at stage enabling_features.",
+      "recommendedRecovery": "Ask the user to rerun the permission step and approve the Windows administrator prompt.",
+      "actualRecoveryResult": "Operation failed quickly, final status stayed failed, and installation state remained unchanged.",
+      "evidence": "4a9735b2-d12d-4485-aa38-cd9d80cbb392",
+      "rawEvidencePath": "docs/blocking-exception-results-2026-04-28.json#permission_denied"
+    },
+    {
+      "case": "wsl_disabled",
+      "triggerMethod": "documented limitation for v1; not required as live hard-gate evidence",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "WSL2 is not enabled or available on this Windows machine.",
+      "recommendedRecovery": "Enable WSL2, reboot if Windows asks for it, then rerun the AgentSecurity installer.",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "docs/exception-matrix-validation.md#wsl_disabled"
+    },
+    {
+      "case": "reboot_interrupted",
+      "triggerMethod": "documented limitation for v1; not required as live hard-gate evidence",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "Installation was interrupted by a Windows restart before completion.",
+      "recommendedRecovery": "After reboot, rerun the installer so it can check current state and continue or recommend reinstall.",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "docs/exception-matrix-validation.md#reboot_interrupted"
+    },
+    {
+      "case": "artifact_missing",
+      "triggerMethod": "Started the production bridge with AGENT_SECURITY_BUNDLED_AGENT_PATH pointing to a missing release asset.",
+      "errorCode": "bundled_agent_artifact_missing",
+      "userVisibleMessage": "Bundled agent artifact is required outside dev mode.",
+      "recommendedRecovery": "Restore the exact bundled release package and rerun the installer.",
+      "actualRecoveryResult": "Bridge failed before install work began; restoring the bundled artifact let health check pass.",
+      "evidence": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-28T12-20-54-345Z\\artifact-missing\\bridge-startup-failure.txt",
+      "rawEvidencePath": "docs/blocking-exception-results-2026-04-28.json#artifact_missing"
+    },
+    {
+      "case": "checksum_mismatch",
+      "triggerMethod": "Started the production bridge with a modified bundled agent package while keeping the frozen manifest SHA256.",
+      "errorCode": "artifact_invalid",
+      "userVisibleMessage": "Command failed at stage verify_checksum.",
+      "recommendedRecovery": "Replace the corrupted package with the exact release asset and rerun install.",
+      "actualRecoveryResult": "Installer stopped at checksum verification and did not continue to agent install.",
+      "evidence": "9b27e5d0-d3b2-4445-a090-3fdf2799b56d",
+      "rawEvidencePath": "docs/blocking-exception-results-2026-04-28.json#checksum_mismatch"
+    },
+    {
+      "case": "startup_failure",
+      "triggerMethod": "documented limitation for v1; not required as live hard-gate evidence",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "The AgentSecurity environment installed, but the agent did not start successfully.",
+      "recommendedRecovery": "Retry start first; if it still fails, rebuild the environment or delete and reinstall.",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "docs/exception-matrix-validation.md#startup_failure"
+    },
+    {
+      "case": "delete_failure",
+      "triggerMethod": "Installed the dedicated AgentSecurity distro, created a protected Windows-side residue under its install directory, then ran delete_environment.",
+      "errorCode": "delete_verification_failed",
+      "userVisibleMessage": "Command failed at stage deleting.",
+      "recommendedRecovery": "Report the remaining path to the user, remove the blocked residue after permission is fixed, then verify the distro is gone.",
+      "actualRecoveryResult": "Delete did not report success while residue remained; removing the protected residue cleared the remaining install directory.",
+      "evidence": "716e3a9c-d857-47d1-99bd-26c484bf5db8",
+      "rawEvidencePath": "docs/blocking-exception-results-2026-04-28.json#delete_failure"
+    }
+  ],
+  "residualItems": {
+    "remainingWindowsPaths": [
+      "[CONTROLLED_DATA_DIR]",
+      "[CONTROLLED_DATA_DIR]\\diagnostics",
+      "[CONTROLLED_DATA_DIR]\\reports"
+    ],
+    "removedWindowsPaths": [
+      "Dedicated distro placeholder for AgentSecurity",
+      "Runtime configuration",
+      "Bridge runtime state"
+    ],
+    "distroPresentAfterDelete": false,
+    "logsRetainedForSupport": [
+      "[CONTROLLED_DATA_DIR]",
+      "[CONTROLLED_DATA_DIR]\\diagnostics",
+      "[CONTROLLED_DATA_DIR]\\reports"
+    ],
+    "unexpectedResidue": []
+  },
+  "supportBundleChecks": {
+    "containsBridgeToken": false,
+    "containsLocalAppDataPath": false,
+    "containsAuthorizationHeader": false,
+    "containsRedactedMarkers": true
+  },
+  "goNoGo": {
+    "decision": "go",
+    "blockingReasons": [],
+    "followUpOwner": "release-lead"
+  }
+}

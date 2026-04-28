@@ -1,7 +1,7 @@
 {
   "name": "agentsecurity",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,8 @@
     "dev:bridge": "node --watch --experimental-strip-types bridge/server.ts",
     "dev:full": "node scripts/dev-full.mjs",
     "bridge": "node --experimental-strip-types bridge/server.ts",
+    "build:assets": "node scripts/build-release-assets.mjs",
+    "validate:live": "node scripts/run-live-validation.mjs",
     "build": "tsc -p tsconfig.bridge.json && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

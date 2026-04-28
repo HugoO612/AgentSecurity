@@ -30,6 +30,7 @@ export type BridgeConfig = {
   hostWriteAllowlist: string[]
   installerDownloadUrl: string
   installerChecksum: string
+  bundledRootfsChecksum: string
   bundledRootfsPath: string
   bundledAgentArtifactPath: string
 }
@@ -88,6 +89,8 @@ export function createBridgeConfig(): BridgeConfig {
   const installerChecksum =
     process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256?.trim() ||
     'dev-skip-checksum'
+  const bundledRootfsChecksum =
+    process.env.AGENT_SECURITY_ROOTFS_SHA256?.trim() || 'dev-skip-checksum'
 
   if (mode !== 'dev') {
     if (allowDevShim) {
@@ -108,8 +111,11 @@ export function createBridgeConfig(): BridgeConfig {
     if (!existsSync(bundledAgentArtifactPath)) {
       throw new Error('Bundled agent artifact is required outside dev mode.')
     }
-    if (!installerChecksum || installerChecksum === 'dev-skip-checksum') {
-      throw new Error('A real bundled artifact checksum is required outside dev mode.')
+    if (!isSha256(installerChecksum)) {
+      throw new Error('A real bundled agent artifact SHA256 is required outside dev mode.')
+    }
+    if (!isSha256(bundledRootfsChecksum)) {
+      throw new Error('A real bundled rootfs SHA256 is required outside dev mode.')
     }
   }
 
@@ -130,8 +136,7 @@ export function createBridgeConfig(): BridgeConfig {
     reportDir,
     distroInstallRoot,
     elevationHelperCommand:
-      process.env.AGENT_SECURITY_ELEVATION_HELPER?.trim() ||
-      'powershell.exe -NoProfile -Command "Write-Output elevation-requested"',
+      process.env.AGENT_SECURITY_ELEVATION_HELPER?.trim() || '',
     allowDevShim,
     rebootResumeMarkerPath: join(runtimeDir, 'resume-after-reboot.json'),
     hostWriteAllowlist: [
@@ -144,6 +149,7 @@ export function createBridgeConfig(): BridgeConfig {
     installerDownloadUrl:
       installerDownloadUrl,
     installerChecksum,
+    bundledRootfsChecksum,
     bundledRootfsPath,
     bundledAgentArtifactPath,
   }
@@ -161,4 +167,8 @@ function resolveBridgeMode(): BridgeMode {
     return 'preview'
   }
   return 'dev'
+}
+
+function isSha256(value: string) {
+  return /^[0-9a-f]{64}$/i.test(value)
 }

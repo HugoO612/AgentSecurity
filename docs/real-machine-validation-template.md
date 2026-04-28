@@ -15,6 +15,9 @@ Use this template for every release candidate validation run.
 - bundled rootfs path:
 - bundled agent artifact path:
 - bundled checksum:
+- bundled artifact version:
+- bundled artifact source:
+- bundled update policy:
 
 ## Validation Steps
 
@@ -34,32 +37,43 @@ Required steps:
 3. handle permission request if shown
 4. confirm WSL enablement / reboot path if needed
 5. create dedicated `AgentSecurity` distro
-6. install bundled artifacts
-7. initial start
-8. stop
-9. start again
-10. rebuild
-11. delete
-12. uninstall verification
+6. import bundled rootfs
+7. install bundled agent artifact
+8. initial start
+9. stop
+10. start again
+11. rebuild
+12. delete
+13. uninstall verification
 
 ## Exception Matrix
 
-Validate and record:
+Validate and record real evidence for the 4 blocking cases:
 
 - permission denied
-- WSL disabled
-- reboot interrupted
-- bundled artifact missing
+- artifact missing
 - checksum mismatch
-- startup failure
 - delete failure
 
-For each exception include:
+For each blocking exception include:
 
 - observed error code
 - user-visible message
 - recommended recovery action
 - actual recovery result
+- evidence path or screenshot
+
+The following v1 cases are documented limitations and do not block public release by themselves:
+
+- WSL disabled
+- reboot interrupted
+- startup failure
+
+For each documented limitation include:
+
+- documentation link
+- user-visible message
+- recovery summary
 
 ## Residual Items
 

@@ -79,7 +79,10 @@ describe('bridge config', () => {
     process.env.AGENT_SECURITY_BRIDGE_TOKEN = 'token'
     process.env.AGENT_SECURITY_BUNDLED_ROOTFS_PATH = rootfs
     process.env.AGENT_SECURITY_BUNDLED_AGENT_PATH = agent
-    process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256 = '0123456789abcdef'
+    process.env.AGENT_SECURITY_ROOTFS_SHA256 =
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256 =
+      'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789'
 
     const { createBridgeConfig } = await import('../../bridge/config.ts')
     const config = createBridgeConfig()
@@ -87,6 +90,9 @@ describe('bridge config', () => {
     expect(config.mode).toBe('production')
     expect(config.allowDevShim).toBe(false)
     expect(config.targetDistro).toBe('AgentSecurity')
+    expect(config.bundledRootfsChecksum).toBe(
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    )
 
     await rm(root, { recursive: true, force: true })
   })

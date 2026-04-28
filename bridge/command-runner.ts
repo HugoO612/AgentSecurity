@@ -115,6 +115,7 @@ export type TemplateCommandInput = {
   rebootResumeMarkerPath?: string
   installerDownloadUrl?: string
   installerChecksum?: string
+  bundledRootfsChecksum?: string
   bundledRootfsPath?: string
   bundledAgentArtifactPath?: string
   elevationHelperCommand?: string
@@ -131,6 +132,7 @@ export type ResolvedExecutionContext = {
   rebootResumeMarkerPath: string
   installerDownloadUrl: string
   installerChecksum: string
+  bundledRootfsChecksum: string
   bundledRootfsPath: string
   bundledAgentArtifactPath: string
   stagedInstallerPath: string
@@ -300,6 +302,10 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     retryable: true,
     validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
     buildInvocation: (context) => buildEnableWslFeaturesInvocation(context),
+    exitCodeMap: {
+      5: 'permission_denied',
+      1223: 'permission_denied',
+    },
   },
   check_reboot_pending: {
     stage: 'awaiting_reboot',
@@ -321,8 +327,16 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     retryable: true,
     validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
     buildInvocation: () => ({
-      program: 'wsl.exe',
-      args: ['--update'],
+      program: 'powershell.exe',
+      args: [
+        '-NoProfile',
+        '-Command',
+        [
+          '& wsl.exe --update',
+          'if ($LASTEXITCODE -ne 0) { Write-Output "wsl-update-skipped exit=$LASTEXITCODE" }',
+          'exit 0',
+        ].join('; '),
+      ],
     }),
   },
   create_distro: {
@@ -625,6 +639,7 @@ function resolveTemplateContext(input: TemplateCommandInput): ResolvedExecutionC
       input.rebootResumeMarkerPath ?? `${runtimeDir}\\resume-after-reboot.json`,
     installerDownloadUrl: input.installerDownloadUrl ?? 'bundled://agent-security-agent.pkg',
     installerChecksum: input.installerChecksum ?? 'dev-skip-checksum',
+    bundledRootfsChecksum: input.bundledRootfsChecksum ?? 'dev-skip-checksum',
     bundledRootfsPath:
       input.bundledRootfsPath ?? 'C:\\AgentSecurity\\bundled\\agent-security-rootfs.tar',
     bundledAgentArtifactPath:
@@ -633,7 +648,7 @@ function resolveTemplateContext(input: TemplateCommandInput): ResolvedExecutionC
     stagedRootfsPath: `${runtimeDir}\\staged-rootfs.tar`,
     elevationHelperCommand:
       input.elevationHelperCommand ??
-      'powershell.exe -NoProfile -Command "Write-Output elevation-requested"',
+      '',
     allowDevShim: input.allowDevShim ?? false,
   }
 }
@@ -650,6 +665,7 @@ function collectSensitiveValues(
     context.rebootResumeMarkerPath,
     context.installerDownloadUrl,
     context.installerChecksum,
+    context.bundledRootfsChecksum,
     context.bundledRootfsPath,
     context.bundledAgentArtifactPath,
     context.stagedInstallerPath,

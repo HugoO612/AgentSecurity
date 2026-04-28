@@ -7,10 +7,57 @@
   "executionMode": "live",
   "targetDistro": "AgentSecurity",
   "bundledArtifacts": {
-    "rootfs": "REPLACE_ME",
-    "agent": "REPLACE_ME",
-    "checksum": "REPLACE_ME"
+    "rootfs": "bridge/assets/agent-security-rootfs.tar",
+    "agent": "bridge/assets/agent-security-agent.pkg",
+    "checksums": {
+      "rootfsSha256": "REPLACE_ME",
+      "agentSha256": "REPLACE_ME"
+    },
+    "version": "REPLACE_ME",
+    "source": "REPLACE_ME",
+    "updatePolicy": "bundled-only"
   },
+  "exceptionMatrix": {
+    "blocking": {
+      "permission_denied": {
+        "required": true,
+        "status": "validated"
+      },
+      "artifact_missing": {
+        "required": true,
+        "status": "validated"
+      },
+      "checksum_mismatch": {
+        "required": true,
+        "status": "validated"
+      },
+      "delete_failure": {
+        "required": true,
+        "status": "validated"
+      }
+    },
+    "documentedLimitations": {
+      "wsl_disabled": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "REPLACE_ME",
+        "recoverySummary": "REPLACE_ME"
+      },
+      "reboot_interrupted": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "REPLACE_ME",
+        "recoverySummary": "REPLACE_ME"
+      },
+      "startup_failure": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "REPLACE_ME",
+        "recoverySummary": "REPLACE_ME"
+      }
+    }
+  },
+  "shimmedCommands": [],
   "lifecycle": [
     {
       "action": "install",
@@ -21,12 +68,111 @@
       "afterState": "ready",
       "recoveryAction": null,
       "evidence": "REPLACE_ME"
+    },
+    {
+      "action": "start_agent",
+      "beforeState": "stopped",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "running",
+      "recoveryAction": null,
+      "evidence": "REPLACE_ME"
+    },
+    {
+      "action": "stop_agent",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "stopped",
+      "recoveryAction": null,
+      "evidence": "REPLACE_ME"
+    },
+    {
+      "action": "rebuild_environment",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "ready",
+      "recoveryAction": null,
+      "evidence": "REPLACE_ME"
+    },
+    {
+      "action": "delete_environment",
+      "beforeState": "ready",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "not-installed",
+      "recoveryAction": null,
+      "evidence": "REPLACE_ME"
     }
   ],
   "exceptionValidation": [
     {
       "case": "permission_denied",
+      "triggerMethod": "REPLACE_ME",
       "errorCode": "REPLACE_ME",
+      "userVisibleMessage": "REPLACE_ME",
+      "recommendedRecovery": "REPLACE_ME",
+      "actualRecoveryResult": "REPLACE_ME",
+      "evidence": "REPLACE_ME"
+    },
+    {
+      "case": "wsl_disabled",
+      "triggerMethod": "REPLACE_ME",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "REPLACE_ME",
+      "recommendedRecovery": "REPLACE_ME",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "REPLACE_ME"
+    },
+    {
+      "case": "reboot_interrupted",
+      "triggerMethod": "REPLACE_ME",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "REPLACE_ME",
+      "recommendedRecovery": "REPLACE_ME",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "REPLACE_ME"
+    },
+    {
+      "case": "artifact_missing",
+      "triggerMethod": "REPLACE_ME",
+      "errorCode": "REPLACE_ME",
+      "userVisibleMessage": "REPLACE_ME",
+      "recommendedRecovery": "REPLACE_ME",
+      "actualRecoveryResult": "REPLACE_ME",
+      "evidence": "REPLACE_ME"
+    },
+    {
+      "case": "checksum_mismatch",
+      "triggerMethod": "REPLACE_ME",
+      "errorCode": "REPLACE_ME",
+      "userVisibleMessage": "REPLACE_ME",
+      "recommendedRecovery": "REPLACE_ME",
+      "actualRecoveryResult": "REPLACE_ME",
+      "evidence": "REPLACE_ME"
+    },
+    {
+      "case": "startup_failure",
+      "triggerMethod": "REPLACE_ME",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "REPLACE_ME",
+      "recommendedRecovery": "REPLACE_ME",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "REPLACE_ME"
+    },
+    {
+      "case": "delete_failure",
+      "triggerMethod": "REPLACE_ME",
+      "errorCode": "REPLACE_ME",
+      "userVisibleMessage": "REPLACE_ME",
       "recommendedRecovery": "REPLACE_ME",
       "actualRecoveryResult": "REPLACE_ME",
       "evidence": "REPLACE_ME"
@@ -36,6 +182,7 @@
     "remainingWindowsPaths": [],
     "removedWindowsPaths": [],
     "distroPresentAfterDelete": false,
+    "logsRetainedForSupport": [],
     "unexpectedResidue": []
   },
   "supportBundleChecks": {
