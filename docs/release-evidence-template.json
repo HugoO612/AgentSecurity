@@ -1,0 +1,52 @@
+{
+  "candidateVersion": "v1.0.0-local",
+  "commit": "REPLACE_ME",
+  "runAt": "2026-01-01T00:00:00.000Z",
+  "machine": "REPLACE_ME",
+  "mode": "release-candidate-validation",
+  "executionMode": "live",
+  "targetDistro": "AgentSecurity",
+  "bundledArtifacts": {
+    "rootfs": "REPLACE_ME",
+    "agent": "REPLACE_ME",
+    "checksum": "REPLACE_ME"
+  },
+  "lifecycle": [
+    {
+      "action": "install",
+      "beforeState": "not-installed",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "ready",
+      "recoveryAction": null,
+      "evidence": "REPLACE_ME"
+    }
+  ],
+  "exceptionValidation": [
+    {
+      "case": "permission_denied",
+      "errorCode": "REPLACE_ME",
+      "recommendedRecovery": "REPLACE_ME",
+      "actualRecoveryResult": "REPLACE_ME",
+      "evidence": "REPLACE_ME"
+    }
+  ],
+  "residualItems": {
+    "remainingWindowsPaths": [],
+    "removedWindowsPaths": [],
+    "distroPresentAfterDelete": false,
+    "unexpectedResidue": []
+  },
+  "supportBundleChecks": {
+    "containsBridgeToken": false,
+    "containsLocalAppDataPath": false,
+    "containsAuthorizationHeader": false,
+    "containsRedactedMarkers": true
+  },
+  "goNoGo": {
+    "decision": "hold",
+    "blockingReasons": [],
+    "followUpOwner": "REPLACE_ME"
+  }
+}

@@ -26,7 +26,12 @@ export function buildEnvironmentReport(
       ? '当前运行在 WSL2 专用隔离环境中。'
       : '当前运行位置未知。',
     targetDistro: context.targetDistro,
-    bridgeStatus: `本地 bridge 通过 ${context.bridgeOrigin} 提供受控动作入口。`,
+    bridgeStatus:
+      context.mode === 'dev'
+        ? `本地 bridge 通过 ${context.bridgeOrigin} 提供受控动作入口；开发模式下应明确区分真实执行与 dev shim。`
+        : context.mode === 'preview'
+          ? `本地 bridge 通过 ${context.bridgeOrigin} 提供受控动作入口；当前为发布前 preview 模式。`
+        : `本地 bridge 通过 ${context.bridgeOrigin} 提供受控动作入口。`,
     windowsHostWritesSummary:
       snapshot.runtime.windowsHostWritesSummary ??
       `Windows 主环境仅写入受控目录：${context.dataDir}、${context.runtimeDir}、${context.diagnosticsDir}。`,

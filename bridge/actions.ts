@@ -786,6 +786,8 @@ async function executeActionPlan(
       installerChecksum: config.installerChecksum,
       bundledRootfsPath: config.bundledRootfsPath,
       bundledAgentArtifactPath: config.bundledAgentArtifactPath,
+      elevationHelperCommand: config.elevationHelperCommand,
+      allowDevShim: config.allowDevShim,
       additionalSensitiveValues: [config.token, ...config.hostWriteAllowlist],
     })
     audits.push(result.audit)
@@ -935,16 +937,30 @@ function appendCommandAudits(
 }
 
 function createInstallerPlan(isRetry: boolean): ActionCommandPlan[] {
-  const commands: ActionCommandPlan[] = [
+  if (isRetry) {
+    return [
+      { command: 'check_windows_capabilities', stage: 'collecting_facts' },
+      { command: 'check_wsl2', stage: 'collecting_facts' },
+      { command: 'install_wsl_kernel_or_update', stage: 'enabling_features' },
+      { command: 'check_distro', stage: 'preparing_distro' },
+      { command: 'download_installer', stage: 'installing_agent' },
+      { command: 'verify_checksum', stage: 'installing_agent' },
+      { command: 'install_agent', stage: 'installing_agent' },
+      { command: 'write_runtime_config', stage: 'writing_config' },
+      { command: 'start_agent', stage: 'starting_bridge' },
+      { command: 'health_check', stage: 'verifying_install' },
+      { command: 'collect_environment_report', stage: 'completed' },
+    ]
+  }
+
+  return [
     { command: 'check_windows_capabilities', stage: 'collecting_facts' },
     { command: 'check_wsl2', stage: 'collecting_facts' },
     { command: 'enable_wsl_optional_features', stage: 'enabling_features' },
     { command: 'install_wsl_kernel_or_update', stage: 'enabling_features' },
     { command: 'check_reboot_pending', stage: 'awaiting_reboot' },
-    {
-      command: isRetry ? 'check_distro' : 'create_distro',
-      stage: 'preparing_distro',
-    },
+    { command: 'create_distro', stage: 'preparing_distro' },
+    { command: 'seed_distro_base', stage: 'preparing_distro' },
     { command: 'download_installer', stage: 'installing_agent' },
     { command: 'verify_checksum', stage: 'installing_agent' },
     { command: 'install_agent', stage: 'installing_agent' },
@@ -953,15 +969,6 @@ function createInstallerPlan(isRetry: boolean): ActionCommandPlan[] {
     { command: 'health_check', stage: 'verifying_install' },
     { command: 'collect_environment_report', stage: 'completed' },
   ]
-
-  if (!isRetry) {
-    commands.splice(5, 0, {
-      command: 'seed_distro_base',
-      stage: 'preparing_distro',
-    })
-  }
-
-  return commands
 }
 
 function suggestRecovery(stage: OperationSnapshot['stage']) {

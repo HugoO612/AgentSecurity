@@ -31,3 +31,5 @@ Current formal scope:
 - [Uninstall Guide](docs/uninstall.md)
 - [Support Process](docs/support-process.md)
 - [Release Checklist](docs/release-checklist.md)
+- [Go / No-Go Table](docs/go-no-go.md)
+- [Real Machine Validation Template](docs/real-machine-validation-template.md)

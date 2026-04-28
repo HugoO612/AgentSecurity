@@ -1,6 +1,6 @@
 export type EnvironmentId = 'local-default'
 
-export type BridgeMode = 'dev' | 'production'
+export type BridgeMode = 'dev' | 'preview' | 'production'
 
 export type InstallationState =
   | 'not-installed'
@@ -156,6 +156,7 @@ export type CommandAuditSummary = {
   startedAt: string
   completedAt: string
   durationMs: number
+  executor?: 'live' | 'dev-shim'
   exitCode?: number
   timedOut: boolean
   stdoutPreview?: string
@@ -257,6 +258,14 @@ export interface DiagnosticsSummary {
     port: number
     generation: number
     runtimeLocation: RuntimeLocation
+    executionMode?: 'live' | 'dev-shim'
+    artifactStatus?: {
+      source: 'bundled' | 'unknown'
+      checksumConfigured: boolean
+      checksumValidation: 'not-run' | 'passed' | 'failed'
+      targetDistro: string
+      agentVersion?: string
+    }
     mode?: BridgeMode
     isMock?: boolean
     lastOperation?: {

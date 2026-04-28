@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BridgeConfig } from '../../bridge/config.ts'
 
-vi.mock('../../bridge/command-runner.ts', () => ({
+vi.mock('../../bridge/command-executor.ts', () => ({
   runAllowedCommand: vi.fn(),
 }))
 vi.mock('node:dns/promises', async () => {
@@ -25,7 +25,7 @@ vi.mock('node:fs/promises', async () => {
 
 import { lookup } from 'node:dns/promises'
 import { statfs } from 'node:fs/promises'
-import { runAllowedCommand } from '../../bridge/command-runner.ts'
+import { runAllowedCommand } from '../../bridge/command-executor.ts'
 import { buildPrecheck } from '../../bridge/precheck.ts'
 
 const config = {

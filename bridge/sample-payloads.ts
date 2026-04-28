@@ -142,6 +142,8 @@ export function emptyDiagnostics(config: BridgeConfig): DiagnosticsSummary {
       port: config.port,
       generation: 0,
       runtimeLocation: 'wsl2',
+      executionMode: config.allowDevShim ? 'dev-shim' : 'live',
+      artifactStatus: buildArtifactStatus(createInitialSnapshotBaseRuntimeVersion(), config, []),
       mode: config.mode,
       isMock: false,
       recentCommands: [],
@@ -168,6 +170,12 @@ export function buildDiagnostics(
       port: config.port,
       generation: snapshot.generation,
       runtimeLocation: snapshot.runtime.location,
+      executionMode: config.allowDevShim ? 'dev-shim' : 'live',
+      artifactStatus: buildArtifactStatus(
+        snapshot.runtime.agentVersion,
+        config,
+        snapshot.commandAudits ?? [],
+      ),
       mode: config.mode,
       isMock: false,
       recentCommands: snapshot.commandAudits?.slice(-10) ?? [],
@@ -198,6 +206,35 @@ export function buildDiagnostics(
       },
     },
   }
+}
+
+function buildArtifactStatus(
+  agentVersion: string | undefined,
+  config: BridgeConfig,
+  audits: NonNullable<EnvironmentSnapshot['commandAudits']>,
+) {
+  const verifyAudit = [...audits]
+    .reverse()
+    .find((audit) => audit.stage === 'verify_checksum')
+
+  return {
+    source: config.installerDownloadUrl.startsWith('bundled://')
+      ? ('bundled' as const)
+      : ('unknown' as const),
+    checksumConfigured: config.installerChecksum !== 'dev-skip-checksum',
+    checksumValidation:
+      !verifyAudit
+        ? ('not-run' as const)
+        : verifyAudit.failureCode
+          ? ('failed' as const)
+          : ('passed' as const),
+    targetDistro: config.targetDistro,
+    agentVersion,
+  }
+}
+
+function createInitialSnapshotBaseRuntimeVersion() {
+  return '1.0.0'
 }
 
 function describeNextStep(

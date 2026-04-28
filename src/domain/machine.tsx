@@ -576,7 +576,6 @@ export function EnvironmentProvider({
       state.context.pendingRoute,
       state.context.lastReceipt,
       state.context.lastResult,
-      snapshot.environmentId,
     ],
   )
 

@@ -38,8 +38,16 @@ Commit: f4bd194
     - no authorization header leakage
     - redaction markers present (`[CONTROLLED_*]`)
 
+## Candidate Gate
+
+- Before public release, use:
+  - `docs/go-no-go.md`
+  - `docs/real-machine-validation-template.md`
+  - `docs/release-evidence-template.json`
+- Public candidate evidence must be recorded in `live` mode and must not inherit this historical shimmed rehearsal as release proof.
+
 ## Release Decision
 
 Release evidence is complete for v1.0.0-local.
 
-Note: this verification run was executed in a non-elevated terminal session with controlled command shims for privileged or host-destructive steps; shimmed command list is recorded in `docs/release-evidence-2026-04-24.json`.
+Note: this historical verification run was executed in a non-elevated terminal session with controlled command shims for privileged or host-destructive steps; it must not be treated as real Windows release evidence. Any future release evidence must clearly distinguish `live` execution from `dev-shim`, and the shimmed command list remains recorded in `docs/release-evidence-2026-04-24.json`.

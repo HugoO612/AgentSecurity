@@ -80,11 +80,11 @@ export function resolveBootstrap(): BootstrapValidationResult {
   }
 
   const mode = candidate.mode as BridgeMode
-  if (mode === 'production' && (candidate.allowMockFallback as boolean)) {
+  if (mode !== 'dev' && (candidate.allowMockFallback as boolean)) {
     return {
       ok: false,
       code: 'bootstrap_mock_forbidden_in_production',
-      message: 'Production bootstrap cannot enable mock fallback.',
+      message: 'Non-dev bootstrap cannot enable mock fallback.',
     }
   }
 
@@ -132,11 +132,15 @@ function validateFieldSet(
     }
   }
 
-  if (candidate.mode !== 'dev' && candidate.mode !== 'production') {
+  if (
+    candidate.mode !== 'dev' &&
+    candidate.mode !== 'preview' &&
+    candidate.mode !== 'production'
+  ) {
     return {
       ok: false,
       code: 'bootstrap_field_invalid',
-      message: 'Bootstrap mode must be dev or production.',
+      message: 'Bootstrap mode must be dev, preview, or production.',
     }
   }
 

@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { spawn } from 'node:child_process'
 import type {
   CommandAuditSummary,
   EnvironmentActionType,
@@ -7,17 +6,46 @@ import type {
   FailureType,
   OperationStage,
 } from '../src/contracts/environment.ts'
+import {
+  executeAllowedCommand,
+  runAllowedCommand,
+  setCommandExecutorForTests,
+  type AllowedProgram,
+  type CommandResult,
+} from './command-executor.ts'
+import {
+  buildStageArtifactsInvocation,
+  buildInstallAgentInvocation,
+  buildVerifyChecksumInvocation,
+} from './artifact-installer.ts'
+import {
+  buildCheckDistroInvocation,
+  buildCheckWslStatusInvocation,
+  buildWindowsCapabilityInvocation,
+} from './environment-check.ts'
+import {
+  buildCheckRebootPendingInvocation,
+  buildEnableWslFeaturesInvocation,
+} from './elevation-controller.ts'
+import {
+  buildCreateDistroInvocation,
+  buildDeleteVerificationInvocation,
+  buildSeedDistroInvocation,
+  validateTargetDistroOnly,
+} from './distro-manager.ts'
+import {
+  buildCleanupEnvironmentInvocation,
+  buildDeleteEnvironmentFilesInvocation,
+} from './recovery-controller.ts'
+import {
+  buildHealthCheckInvocation,
+  buildStartAgentInvocation,
+  buildStopAgentInvocation,
+  buildWriteRuntimeConfigInvocation,
+} from './runtime-controller.ts'
 
 const MAX_STDOUT_CHARS = 4000
 const MAX_STDERR_CHARS = 4000
-
-export type AllowedProgram = 'powershell.exe' | 'wsl.exe'
-
-export type CommandResult = {
-  exitCode: number
-  stdout: string
-  stderr: string
-}
 
 export type TemplatedAction = EnvironmentActionType | 'installer'
 
@@ -42,7 +70,7 @@ export type TemplateCommandId =
   | 'delete_environment_files'
   | 'delete_verification'
 
-type TemplateStage =
+export type TemplateStage =
   | Extract<
       OperationStage,
       | 'collecting_facts'
@@ -65,23 +93,15 @@ type TemplateStage =
       | 'deleting'
     >
 
-type TemplateSpec = {
-  stage: TemplateStage
-  failureStage: FailureStage
-  failureType: FailureType
-  defaultFailureCode: string
-  retryable: boolean
-  buildInvocation: (context: ResolvedTemplateContext) => {
-    program: AllowedProgram
-    args: string[]
-    validate?: (result: CommandResult) => ValidationResult
-  }
-  exitCodeMap?: Record<number, string>
-}
-
-type ValidationResult =
+export type ValidationResult =
   | { ok: true }
   | { ok: false; failureCode: string; detail?: string }
+
+export type CommandInvocation = {
+  program: AllowedProgram
+  args: string[]
+  validate?: (result: CommandResult) => ValidationResult
+}
 
 export type TemplateCommandInput = {
   action: TemplatedAction
@@ -97,10 +117,12 @@ export type TemplateCommandInput = {
   installerChecksum?: string
   bundledRootfsPath?: string
   bundledAgentArtifactPath?: string
+  elevationHelperCommand?: string
+  allowDevShim?: boolean
   additionalSensitiveValues?: string[]
 }
 
-type ResolvedTemplateContext = {
+export type ResolvedExecutionContext = {
   targetDistro: string
   runtimeDir: string
   diagnosticsDir: string
@@ -113,6 +135,19 @@ type ResolvedTemplateContext = {
   bundledAgentArtifactPath: string
   stagedInstallerPath: string
   stagedRootfsPath: string
+  elevationHelperCommand: string
+  allowDevShim: boolean
+}
+
+type TemplateSpec = {
+  stage: TemplateStage
+  failureStage: FailureStage
+  failureType: FailureType
+  defaultFailureCode: string
+  retryable: boolean
+  buildInvocation: (context: ResolvedExecutionContext) => CommandInvocation
+  validateContext?: (context: ResolvedExecutionContext) => ValidationResult
+  exitCodeMap?: Record<number, string>
 }
 
 export type TemplateCommandSuccess = {
@@ -141,13 +176,6 @@ export type TemplateCommandFailure = {
 export type TemplateCommandExecutionResult =
   | TemplateCommandSuccess
   | TemplateCommandFailure
-
-type CommandExecutor = (
-  program: AllowedProgram,
-  args: string[],
-  timeoutMs: number,
-  onTimeout?: () => void,
-) => Promise<CommandResult>
 
 const ACTION_TIMEOUT_MS: Record<TemplatedAction, number> = {
   installer: 15 * 60 * 1000,
@@ -239,18 +267,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'unsupported_environment',
     defaultFailureCode: 'windows_capability_check_failed',
     retryable: false,
-    buildInvocation: () => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        '$caps=@{platform=$env:OS; virtualization=$true}; $caps | ConvertTo-Json -Compress',
-      ],
-      validate: (result) =>
-        result.stdout.includes('platform')
-          ? { ok: true }
-          : { ok: false, failureCode: 'windows_capability_check_failed', detail: result.stderr || result.stdout },
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: () => buildWindowsCapabilityInvocation(),
   },
   check_wsl2: {
     stage: 'check_wsl2',
@@ -258,10 +276,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'missing_capability',
     defaultFailureCode: 'wsl_not_found',
     retryable: false,
-    buildInvocation: () => ({
-      program: 'wsl.exe',
-      args: ['--status'],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: () => buildCheckWslStatusInvocation(),
     exitCodeMap: {
       1: 'wsl_not_enabled',
       2: 'wsl_policy_blocked',
@@ -273,19 +289,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'missing_capability',
     defaultFailureCode: 'distro_not_found',
     retryable: true,
-    buildInvocation: ({ targetDistro }) => ({
-      program: 'wsl.exe',
-      args: ['-l', '-q'],
-      validate: (result) => {
-        const distros = result.stdout
-          .split(/\r?\n/)
-          .map((entry) => entry.replaceAll('\u0000', '').trim())
-          .filter(Boolean)
-        return distros.includes(targetDistro)
-          ? { ok: true }
-          : { ok: false, failureCode: 'distro_not_found', detail: `Missing dedicated distro: ${targetDistro}` }
-      },
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildCheckDistroInvocation(context),
   },
   enable_wsl_optional_features: {
     stage: 'enabling_features',
@@ -293,19 +298,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'permission_required',
     defaultFailureCode: 'wsl_feature_enable_failed',
     retryable: true,
-    buildInvocation: () => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          '$ErrorActionPreference="Stop"',
-          'Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -NoRestart | Out-Null',
-          'Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -NoRestart | Out-Null',
-          'Write-Output "WSL features enabled"',
-        ].join('; '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildEnableWslFeaturesInvocation(context),
   },
   check_reboot_pending: {
     stage: 'awaiting_reboot',
@@ -313,23 +307,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'transient',
     defaultFailureCode: 'reboot_required',
     retryable: true,
-    buildInvocation: ({ rebootResumeMarkerPath, targetDistro }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          `$resumePath='${escapePowershellPath(rebootResumeMarkerPath)}'`,
-          '$pending=(Test-Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending") -or (Test-Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired")',
-          'if ($pending) {',
-          `  Set-Content -Path $resumePath -Value '{"resume":"installer","targetDistro":"${escapeJsonString(targetDistro)}"}'`,
-          '  Write-Error "reboot required"',
-          '  exit 3',
-          '}',
-          'Write-Output "No reboot required"; exit 0',
-        ].join(' '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildCheckRebootPendingInvocation(context),
     exitCodeMap: {
       3: 'reboot_required',
     },
@@ -340,6 +319,7 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'wsl_kernel_update_failed',
     retryable: true,
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
     buildInvocation: () => ({
       program: 'wsl.exe',
       args: ['--update'],
@@ -351,22 +331,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'distro_create_failed',
     retryable: true,
-    buildInvocation: ({ targetDistro, distroInstallRoot, bundledRootfsPath }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          `$distroPath='${escapePowershellPath(`${distroInstallRoot}\\${targetDistro}`)}'`,
-          `$rootfs='${escapePowershellPath(bundledRootfsPath)}'`,
-          'New-Item -ItemType Directory -Force -Path $distroPath | Out-Null',
-          'if (-not (Test-Path $rootfs)) { Write-Error "rootfs missing"; exit 1 }',
-          `& wsl.exe --import '${escapePowershellString(targetDistro)}' $distroPath $rootfs --version 2`,
-          'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }',
-          `Write-Output '${escapePowershellString(targetDistro)}'`,
-        ].join('; '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildCreateDistroInvocation(context),
   },
   seed_distro_base: {
     stage: 'preparing_distro',
@@ -374,17 +340,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'distro_seed_failed',
     retryable: true,
-    buildInvocation: ({ targetDistro }) => ({
-      program: 'wsl.exe',
-      args: [
-        '-d',
-        targetDistro,
-        '--',
-        'sh',
-        '-lc',
-        'mkdir -p /opt/agent-security/bootstrap && printf seeded >/opt/agent-security/bootstrap/state && echo seeded',
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildSeedDistroInvocation(context),
   },
   download_installer: {
     stage: 'download_installer',
@@ -392,24 +349,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'network_error',
     defaultFailureCode: 'install_download_failed',
     retryable: true,
-    buildInvocation: ({ bundledAgentArtifactPath, bundledRootfsPath, stagedInstallerPath, stagedRootfsPath }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          `$installer='${escapePowershellPath(bundledAgentArtifactPath)}'`,
-          `$rootfs='${escapePowershellPath(bundledRootfsPath)}'`,
-          `$stagedInstaller='${escapePowershellPath(stagedInstallerPath)}'`,
-          `$stagedRootfs='${escapePowershellPath(stagedRootfsPath)}'`,
-          'if (-not (Test-Path $installer)) { Write-Error "agent artifact missing"; exit 1 }',
-          'if (-not (Test-Path $rootfs)) { Write-Error "rootfs artifact missing"; exit 1 }',
-          'Copy-Item -Force $installer $stagedInstaller',
-          'Copy-Item -Force $rootfs $stagedRootfs',
-          'Write-Output "artifacts-staged"',
-        ].join('; '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildStageArtifactsInvocation(context),
   },
   verify_checksum: {
     stage: 'verify_checksum',
@@ -417,16 +358,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'artifact_invalid',
     retryable: false,
-    buildInvocation: ({ installerChecksum, stagedInstallerPath }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        installerChecksum === 'dev-skip-checksum'
-          ? `if (Test-Path '${escapePowershellPath(stagedInstallerPath)}') { Write-Output 'checksum-skipped'; exit 0 } else { exit 1 }`
-          : `$hash=(Get-FileHash -Algorithm SHA256 -Path '${escapePowershellPath(stagedInstallerPath)}').Hash.ToLower(); if ($hash -eq '${escapePowershellString(installerChecksum.toLowerCase())}') { Write-Output 'checksum-ok'; exit 0 } else { Write-Error 'checksum mismatch'; exit 1 }`,
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildVerifyChecksumInvocation(context),
   },
   install_agent: {
     stage: 'install_agent',
@@ -434,19 +367,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'agent_install_failed',
     retryable: false,
-    buildInvocation: ({ targetDistro, stagedInstallerPath }) => ({
-      program: 'wsl.exe',
-      args: [
-        '-d',
-        targetDistro,
-        '--',
-        'sh',
-        '-lc',
-        `mkdir -p /opt/agent-security && printf '%s' '${escapeShellSingleQuoted(
-          windowsPathToWslPath(stagedInstallerPath),
-        )}' >/opt/agent-security/installer-source && echo installed`,
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildInstallAgentInvocation(context),
   },
   write_runtime_config: {
     stage: 'write_runtime_config',
@@ -454,18 +376,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'runtime_config_write_failed',
     retryable: true,
-    buildInvocation: ({ runtimeDir, targetDistro, rebootResumeMarkerPath }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          `Set-Content -Path '${escapePowershellPath(runtimeDir)}\\runtime.env' -Value 'TARGET_DISTRO=${escapePowershellString(targetDistro)}'`,
-          `if (Test-Path '${escapePowershellPath(rebootResumeMarkerPath)}') { Remove-Item -Force '${escapePowershellPath(rebootResumeMarkerPath)}' }`,
-          "Write-Output 'config-written'",
-        ].join('; '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildWriteRuntimeConfigInvocation(context),
   },
   start_agent: {
     stage: 'starting_bridge',
@@ -473,19 +385,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'startup_failed',
     defaultFailureCode: 'agent_start_failed',
     retryable: true,
-    buildInvocation: ({ runtimeDir, targetDistro }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          `& wsl.exe -d '${escapePowershellString(targetDistro)}' -- sh -lc "mkdir -p /var/lib/agent-security && printf running >/var/lib/agent-security/state && echo running"`,
-          'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }',
-          `Set-Content -Path '${escapePowershellPath(runtimeDir)}\\agent.state' -Value 'running'`,
-          "Write-Output 'running'",
-        ].join('; '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildStartAgentInvocation(context),
   },
   stop_agent: {
     stage: 'stopping',
@@ -493,19 +394,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'agent_stop_failed',
     retryable: true,
-    buildInvocation: ({ runtimeDir, targetDistro }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          `& wsl.exe -d '${escapePowershellString(targetDistro)}' -- sh -lc "mkdir -p /var/lib/agent-security && printf stopped >/var/lib/agent-security/state && echo stopped"`,
-          'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }',
-          `Set-Content -Path '${escapePowershellPath(runtimeDir)}\\agent.state' -Value 'stopped'`,
-          "Write-Output 'stopped'",
-        ].join('; '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildStopAgentInvocation(context),
   },
   health_check: {
     stage: 'health_check',
@@ -513,14 +403,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'startup_failed',
     defaultFailureCode: 'health_check_failed',
     retryable: true,
-    buildInvocation: ({ runtimeDir }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        `if ((Get-Content '${escapePowershellPath(runtimeDir)}\\agent.state' -ErrorAction SilentlyContinue) -eq 'running') { Write-Output 'healthy'; exit 0 } else { Write-Error 'not running'; exit 1 }`,
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildHealthCheckInvocation(context),
   },
   collect_environment_report: {
     stage: 'verifying_install',
@@ -528,12 +412,13 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'environment_report_failed',
     retryable: true,
-    buildInvocation: ({ reportDir, targetDistro }) => ({
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => ({
       program: 'powershell.exe',
       args: [
         '-NoProfile',
         '-Command',
-        `New-Item -ItemType Directory -Force -Path '${escapePowershellPath(reportDir)}' | Out-Null; Set-Content -Path '${escapePowershellPath(reportDir)}\\environment-report.txt' -Value 'distro=${escapePowershellString(targetDistro)}'; Write-Output 'report-collected'`,
+        `New-Item -ItemType Directory -Force -Path '${escapePowershellString(context.reportDir)}' | Out-Null; Set-Content -Path '${escapePowershellString(context.reportDir)}\\environment-report.txt' -Value 'distro=${escapePowershellString(context.targetDistro)}'; Write-Output 'report-collected'`,
       ],
     }),
   },
@@ -543,14 +428,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'environment_cleanup_failed',
     retryable: true,
-    buildInvocation: ({ runtimeDir }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        `Remove-Item -Force -ErrorAction SilentlyContinue '${escapePowershellPath(runtimeDir)}\\agent.state','${escapePowershellPath(runtimeDir)}\\runtime.env'; Write-Output 'cleaned'`,
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildCleanupEnvironmentInvocation(context),
   },
   delete_environment_files: {
     stage: 'deleting',
@@ -558,19 +437,8 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'delete_failed',
     retryable: true,
-    buildInvocation: ({ runtimeDir, targetDistro, distroInstallRoot }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          `& wsl.exe --unregister '${escapePowershellString(targetDistro)}'`,
-          'if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 4294967295) { exit $LASTEXITCODE }',
-          `Remove-Item -Recurse -Force -ErrorAction SilentlyContinue '${escapePowershellPath(`${distroInstallRoot}\\${targetDistro}`)}','${escapePowershellPath(runtimeDir)}\\agent.state','${escapePowershellPath(runtimeDir)}\\runtime.env','${escapePowershellPath(runtimeDir)}\\staged-agent.pkg','${escapePowershellPath(runtimeDir)}\\staged-rootfs.tar'`,
-          "Write-Output 'deleted'",
-        ].join('; '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildDeleteEnvironmentFilesInvocation(context),
   },
   delete_verification: {
     stage: 'deleting',
@@ -578,22 +446,10 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     failureType: 'command_failed',
     defaultFailureCode: 'delete_verification_failed',
     retryable: true,
-    buildInvocation: ({ distroInstallRoot, targetDistro }) => ({
-      program: 'powershell.exe',
-      args: [
-        '-NoProfile',
-        '-Command',
-        [
-          `$distroDir='${escapePowershellPath(`${distroInstallRoot}\\${targetDistro}`)}'`,
-          "$distros=& wsl.exe -l -q",
-          `if (-not (Test-Path $distroDir) -and ($distros -notmatch '^${escapePowershellRegex(targetDistro)}$')) { Write-Output 'verified'; exit 0 } else { exit 1 }`,
-        ].join('; '),
-      ],
-    }),
+    validateContext: (context) => validateTargetDistroOnly(context.targetDistro),
+    buildInvocation: (context) => buildDeleteVerificationInvocation(context),
   },
 }
-
-let commandExecutor: CommandExecutor = runAllowedCommand
 
 export async function runTemplateCommand(
   input: TemplateCommandInput,
@@ -601,16 +457,31 @@ export async function runTemplateCommand(
   assertTemplatedCommandAllowed(input.action, input.command)
   const context = resolveTemplateContext(input)
   const template = TEMPLATE_SPECS[input.command]
-  const invocation = template.buildInvocation(context)
-  const timeoutMs = ACTION_TIMEOUT_MS[input.action]
+  const contextValidation = template.validateContext?.(context) ?? { ok: true }
   const startedAt = new Date().toISOString()
   const startedMs = Date.now()
   const sensitiveValues = collectSensitiveValues(input, context)
   const commandId = randomUUID()
 
+  if (!contextValidation.ok) {
+    return createFailureResult({
+      input,
+      template,
+      commandId,
+      startedAt,
+      startedMs,
+      failureCode: contextValidation.failureCode,
+      detail: contextValidation.detail,
+      timedOut: false,
+    })
+  }
+
+  const invocation = template.buildInvocation(context)
+  const timeoutMs = ACTION_TIMEOUT_MS[input.action]
   let timedOut = false
+
   try {
-    const rawResult = await commandExecutor(
+    const rawResult = await executeAllowedCommand(
       invocation.program,
       invocation.args,
       timeoutMs,
@@ -621,7 +492,7 @@ export async function runTemplateCommand(
     const stdout = sanitizeAndTruncate(rawResult.stdout, MAX_STDOUT_CHARS, sensitiveValues)
     const stderr = sanitizeAndTruncate(rawResult.stderr, MAX_STDERR_CHARS, sensitiveValues)
     const completion = buildCompletion(startedMs, rawResult.exitCode)
-    const validation = invocation.validate?.({ ...rawResult, stdout, stderr }) ?? { ok: true }
+    const validation = invocation.validate?.(rawResult) ?? { ok: true }
 
     if (validation.ok && rawResult.exitCode === 0) {
       return {
@@ -641,6 +512,7 @@ export async function runTemplateCommand(
           timedOut,
           stdoutPreview: stdout,
           stderrPreview: stderr,
+          executor: context.allowDevShim ? 'dev-shim' : 'live',
         },
       }
     }
@@ -669,40 +541,65 @@ export async function runTemplateCommand(
         stdoutPreview: stdout,
         stderrPreview: stderr,
         failureCode,
+        executor: context.allowDevShim ? 'dev-shim' : 'live',
       },
     }
   } catch (error) {
-    const completion = buildCompletion(startedMs, undefined)
-    const errorMessage = sanitizeAndTruncate(
+    const detail = sanitizeAndTruncate(
       error instanceof Error ? error.message : 'Command execution failed.',
       MAX_STDERR_CHARS,
       sensitiveValues,
     )
-    const failureCode = timedOut ? `${input.command}_timeout` : `${input.command}_exception`
-    return {
-      ok: false,
-      stage: template.stage,
-      failureStage: template.failureStage,
-      failureType: timedOut ? 'timeout' : template.failureType,
-      failureCode,
-      retryable: template.retryable,
-      message: timedOut
-        ? `Command timed out at stage ${template.stage}.`
-        : `Command execution errored at stage ${template.stage}.`,
-      detail: errorMessage,
+    return createFailureResult({
+      input,
+      template,
+      commandId,
+      startedAt,
+      startedMs,
+      failureCode: timedOut ? `${input.command}_timeout` : `${input.command}_exception`,
+      detail,
       timedOut,
-      audit: {
-        commandId,
-        action: input.action,
-        stage: template.stage,
-        startedAt,
-        completedAt: completion.completedAt,
-        durationMs: completion.durationMs,
-        timedOut,
-        stderrPreview: errorMessage,
-        failureCode,
-      },
-    }
+      failureType: timedOut ? 'timeout' : template.failureType,
+    })
+  }
+}
+
+function createFailureResult(input: {
+  input: TemplateCommandInput
+  template: TemplateSpec
+  commandId: string
+  startedAt: string
+  startedMs: number
+  failureCode: string
+  detail?: string
+  timedOut: boolean
+  failureType?: FailureType
+}): TemplateCommandFailure {
+  const completion = buildCompletion(input.startedMs, undefined)
+  return {
+    ok: false,
+    stage: input.template.stage,
+    failureStage: input.template.failureStage,
+    failureType: input.failureType ?? input.template.failureType,
+    failureCode: input.failureCode,
+    retryable: input.template.retryable && !input.timedOut,
+    message: input.timedOut
+      ? `Command timed out at stage ${input.template.stage}.`
+      : `Command execution errored at stage ${input.template.stage}.`,
+    detail: input.detail,
+    timedOut: input.timedOut,
+    audit: {
+      commandId: input.commandId,
+      action: input.input.action,
+      stage: input.template.stage,
+      startedAt: input.startedAt,
+      completedAt: completion.completedAt,
+      durationMs: completion.durationMs,
+      timedOut: input.timedOut,
+      stderrPreview: input.detail,
+      failureCode: input.failureCode,
+      executor: input.input.allowDevShim ? 'dev-shim' : 'live',
+    },
   }
 }
 
@@ -716,7 +613,7 @@ function assertTemplatedCommandAllowed(
   }
 }
 
-function resolveTemplateContext(input: TemplateCommandInput): ResolvedTemplateContext {
+function resolveTemplateContext(input: TemplateCommandInput): ResolvedExecutionContext {
   const runtimeDir = input.runtimeDir ?? 'C:\\AgentSecurity\\runtime'
   return {
     targetDistro: input.targetDistro,
@@ -726,7 +623,7 @@ function resolveTemplateContext(input: TemplateCommandInput): ResolvedTemplateCo
     distroInstallRoot: input.distroInstallRoot ?? 'C:\\AgentSecurity\\distros',
     rebootResumeMarkerPath:
       input.rebootResumeMarkerPath ?? `${runtimeDir}\\resume-after-reboot.json`,
-    installerDownloadUrl: input.installerDownloadUrl ?? 'https://example.com/openclaw/install.sh',
+    installerDownloadUrl: input.installerDownloadUrl ?? 'bundled://agent-security-agent.pkg',
     installerChecksum: input.installerChecksum ?? 'dev-skip-checksum',
     bundledRootfsPath:
       input.bundledRootfsPath ?? 'C:\\AgentSecurity\\bundled\\agent-security-rootfs.tar',
@@ -734,14 +631,18 @@ function resolveTemplateContext(input: TemplateCommandInput): ResolvedTemplateCo
       input.bundledAgentArtifactPath ?? 'C:\\AgentSecurity\\bundled\\agent-security-agent.pkg',
     stagedInstallerPath: `${runtimeDir}\\staged-agent.pkg`,
     stagedRootfsPath: `${runtimeDir}\\staged-rootfs.tar`,
+    elevationHelperCommand:
+      input.elevationHelperCommand ??
+      'powershell.exe -NoProfile -Command "Write-Output elevation-requested"',
+    allowDevShim: input.allowDevShim ?? false,
   }
 }
 
 function collectSensitiveValues(
   input: TemplateCommandInput,
-  context: ResolvedTemplateContext,
+  context: ResolvedExecutionContext,
 ) {
-  const values = [
+  return [
     context.runtimeDir,
     context.diagnosticsDir,
     context.reportDir,
@@ -754,8 +655,7 @@ function collectSensitiveValues(
     context.stagedInstallerPath,
     context.stagedRootfsPath,
     ...(input.additionalSensitiveValues ?? []),
-  ]
-  return values.filter(Boolean)
+  ].filter(Boolean)
 }
 
 function buildCompletion(startedMs: number, exitCode: number | undefined) {
@@ -775,58 +675,6 @@ function resolveFailureCode(
     return validation.failureCode
   }
   return template.exitCodeMap?.[exitCode] ?? template.defaultFailureCode
-}
-
-export async function runAllowedCommand(
-  program: AllowedProgram,
-  args: string[],
-  timeoutMs = 15000,
-  onTimeout?: () => void,
-): Promise<CommandResult> {
-  if (program !== 'powershell.exe' && program !== 'wsl.exe') {
-    throw new Error(`Program is not allowlisted: ${program}`)
-  }
-
-  return new Promise((resolve, reject) => {
-    const child = spawn(program, args, {
-      shell: false,
-      windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
-
-    let stdout = ''
-    let stderr = ''
-    const timeout = setTimeout(() => {
-      onTimeout?.()
-      child.kill()
-      reject(new Error(`Command timed out: ${program}`))
-    }, timeoutMs)
-
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString()
-    })
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-    })
-    child.on('error', (error) => {
-      clearTimeout(timeout)
-      reject(error)
-    })
-    child.on('close', (exitCode) => {
-      clearTimeout(timeout)
-      resolve({
-        exitCode: exitCode ?? 1,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-      })
-    })
-  })
-}
-
-export function setCommandExecutorForTests(
-  executor: CommandExecutor | null,
-) {
-  commandExecutor = executor ?? runAllowedCommand
 }
 
 function sanitizeAndTruncate(
@@ -852,7 +700,6 @@ function redactKnownSensitivePatterns(value: string) {
     [/(token\s*[:=]\s*)([^\s"'`]+)/gi, '$1[REDACTED]'],
     [/[A-Za-z]:\\(?:[^\\\r\n]+\\)*[^\\\r\n]*/g, '[REDACTED_PATH]'],
   ]
-
   return patterns.reduce((content, [pattern, replacement]) => {
     return content.replace(pattern, replacement)
   }, value)
@@ -862,24 +709,5 @@ function escapePowershellString(value: string) {
   return value.replace(/'/g, "''")
 }
 
-function escapePowershellPath(value: string) {
-  return escapePowershellString(value)
-}
-
-function escapePowershellRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function escapeJsonString(value: string) {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-}
-
-function windowsPathToWslPath(value: string) {
-  const drive = value.slice(0, 1).toLowerCase()
-  const rest = value.slice(2).replace(/\\/g, '/')
-  return `/mnt/${drive}${rest}`
-}
-
-function escapeShellSingleQuoted(value: string) {
-  return value.replace(/'/g, `'"'"'`)
-}
+export { runAllowedCommand, setCommandExecutorForTests }
+export type { AllowedProgram, CommandResult }

@@ -25,6 +25,7 @@ export type BridgeConfig = {
   reportDir: string
   distroInstallRoot: string
   elevationHelperCommand: string
+  allowDevShim: boolean
   rebootResumeMarkerPath: string
   hostWriteAllowlist: string[]
   installerDownloadUrl: string
@@ -41,8 +42,8 @@ export function createBridgeConfig(): BridgeConfig {
   const bridgeOrigin = `http://127.0.0.1:${port}`
   const tokenFromEnv = process.env.AGENT_SECURITY_BRIDGE_TOKEN?.trim()
 
-  if (mode === 'production' && !tokenFromEnv) {
-    throw new Error('AGENT_SECURITY_BRIDGE_TOKEN is required in production mode.')
+  if (mode !== 'dev' && !tokenFromEnv) {
+    throw new Error('AGENT_SECURITY_BRIDGE_TOKEN is required outside dev mode.')
   }
 
   const token = tokenFromEnv || 'agent-security-dev-token'
@@ -76,13 +77,39 @@ export function createBridgeConfig(): BridgeConfig {
   const bundledAgentArtifactPath =
     process.env.AGENT_SECURITY_BUNDLED_AGENT_PATH?.trim() ||
     join(bridgeRoot, 'assets', 'agent-security-agent.pkg')
+  const allowDevShim = process.env.AGENT_SECURITY_ALLOW_DEV_SHIM === '1'
+  const configuredTargetDistro =
+    process.env.AGENT_SECURITY_TARGET_DISTRO?.trim() || 'AgentSecurity'
+  const configuredDistroSeed =
+    process.env.AGENT_SECURITY_DISTRO_SEED?.trim() || 'AgentSecurityBase'
+  const installerDownloadUrl =
+    process.env.AGENT_SECURITY_AGENT_INSTALL_URL?.trim() ||
+    'bundled://agent-security-agent.pkg'
+  const installerChecksum =
+    process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256?.trim() ||
+    'dev-skip-checksum'
 
-  if (mode === 'production') {
+  if (mode !== 'dev') {
+    if (allowDevShim) {
+      throw new Error('AGENT_SECURITY_ALLOW_DEV_SHIM must be disabled outside dev mode.')
+    }
+    if (configuredTargetDistro !== 'AgentSecurity') {
+      throw new Error('Release modes only support the dedicated AgentSecurity distro.')
+    }
+    if (configuredDistroSeed !== 'AgentSecurityBase') {
+      throw new Error('Release modes only support the bundled AgentSecurityBase seed.')
+    }
+    if (installerDownloadUrl !== 'bundled://agent-security-agent.pkg') {
+      throw new Error('Release modes only support bundled installer assets.')
+    }
     if (!existsSync(bundledRootfsPath)) {
-      throw new Error('Bundled rootfs artifact is required in production mode.')
+      throw new Error('Bundled rootfs artifact is required outside dev mode.')
     }
     if (!existsSync(bundledAgentArtifactPath)) {
-      throw new Error('Bundled agent artifact is required in production mode.')
+      throw new Error('Bundled agent artifact is required outside dev mode.')
+    }
+    if (!installerChecksum || installerChecksum === 'dev-skip-checksum') {
+      throw new Error('A real bundled artifact checksum is required outside dev mode.')
     }
   }
 
@@ -98,13 +125,14 @@ export function createBridgeConfig(): BridgeConfig {
     operationsDir: join(dataRoot, 'operations'),
     runtimeDir,
     diagnosticsDir,
-    targetDistro: process.env.AGENT_SECURITY_TARGET_DISTRO?.trim() || 'AgentSecurity',
-    distroSeedName: process.env.AGENT_SECURITY_DISTRO_SEED?.trim() || 'AgentSecurityBase',
+    targetDistro: configuredTargetDistro,
+    distroSeedName: configuredDistroSeed,
     reportDir,
     distroInstallRoot,
     elevationHelperCommand:
       process.env.AGENT_SECURITY_ELEVATION_HELPER?.trim() ||
       'powershell.exe -NoProfile -Command "Write-Output elevation-requested"',
+    allowDevShim,
     rebootResumeMarkerPath: join(runtimeDir, 'resume-after-reboot.json'),
     hostWriteAllowlist: [
       dataRoot,
@@ -114,11 +142,8 @@ export function createBridgeConfig(): BridgeConfig {
       distroInstallRoot,
     ],
     installerDownloadUrl:
-      process.env.AGENT_SECURITY_AGENT_INSTALL_URL?.trim() ||
-      'https://example.com/openclaw/install.sh',
-    installerChecksum:
-      process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256?.trim() ||
-      'dev-skip-checksum',
+      installerDownloadUrl,
+    installerChecksum,
     bundledRootfsPath,
     bundledAgentArtifactPath,
   }
@@ -129,5 +154,11 @@ function getLocalAppDataRoot() {
 }
 
 function resolveBridgeMode(): BridgeMode {
-  return process.env.AGENT_SECURITY_MODE === 'production' ? 'production' : 'dev'
+  if (process.env.AGENT_SECURITY_MODE === 'production') {
+    return 'production'
+  }
+  if (process.env.AGENT_SECURITY_MODE === 'preview') {
+    return 'preview'
+  }
+  return 'dev'
 }
