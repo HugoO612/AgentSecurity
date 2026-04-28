@@ -2,6 +2,8 @@
 
 Agent Security is a local product that runs the agent inside a dedicated isolated runtime on the same machine.
 
+Public v1 scope is only the WSL2 local isolated edition. Cloud-hosted runtime is not a delivered v1 capability.
+
 Current formal scope:
 - In-app installer orchestration for local setup.
 - Dedicated `AgentSecurity` distro strategy with controlled bridge actions.
