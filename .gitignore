@@ -13,7 +13,7 @@ dist-ssr
 *.local
 .tmp/
 ~/
-release/*.zip
+release/
 
 # Editor directories and files
 .vscode/*
