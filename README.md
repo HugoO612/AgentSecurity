@@ -1,18 +1,18 @@
-# Agent Security v1 Local Edition
+# Agent Security v1 One-Click WSL2 Deployment
 
-AgentSecurity v1 Local Edition is the supported local Windows release for users who need the agent to stay on the same machine. It uses a dedicated WSL2 runtime boundary instead of direct host installation.
+AgentSecurity v1 defaults to a one-click WSL2 isolated deployment on Windows. The supported public install path creates and manages a dedicated `AgentSecurity` WSL2 runtime instead of installing the agent directly into the Windows host.
 
 ## Recommended Path
 
-For local Windows use, the recommended path is the dedicated WSL2 isolated route used by this release.
+For Windows users, the default and recommended path is the one-click WSL2 isolated route shipped by this release.
 
-This Local Edition is still a limited recommendation path:
-- recommended for users who specifically need local execution on Windows
-- not a blanket default for every ordinary user or every future deployment mode
+This public v1 path is intentionally narrow:
+- default install path is a dedicated `AgentSecurity` WSL2 runtime
 - not a direct-host install path
 - not a user-managed Ubuntu reuse path
+- not the final answer for every future deployment mode
 
-Users who want the lowest ongoing local setup burden should use the isolated local path only if they need local execution. A future cloud-hosted managed option remains the better fit for users who prefer remote isolation over local subsystem setup.
+Users who do not want to own local subsystem setup and local recovery should wait for a future cloud-hosted managed option rather than bypass the WSL2 isolation boundary.
 
 ## Install For Regular Users
 
@@ -20,7 +20,7 @@ Users who want the lowest ongoing local setup burden should use the isolated loc
 2. Run the installer on Windows.
 3. Approve the Windows administrator prompt if WSL2 setup requires it.
 4. Wait for AgentSecurity to create the dedicated `AgentSecurity` WSL2 environment from the bundled release files.
-5. Use the app controls to start, stop, rebuild, or delete the local environment.
+5. Use the app controls to start, stop, rebuild, or delete the dedicated WSL2 environment.
 
 If Windows says WSL2 is not enabled, enable or install WSL2, reboot if prompted, then run the installer again. If installation is interrupted by reboot, rerun the installer after Windows starts. If the agent does not start, retry start first, then use rebuild or delete and reinstall.
 
@@ -80,7 +80,7 @@ Current release status:
 - [Bundled Asset Spec](docs/bundled-assets-spec.md)
 - [Exception Matrix Validation](docs/exception-matrix-validation.md)
 - [Release Freeze Record](docs/release-freeze-2026-04-28.md)
-- [Release Notes](docs/release-notes-v1.0.0-local.md)
+- [Release Notes](docs/release-notes-v1.0.0-wsl2.md)
 - [FAQ](docs/faq.md)
 - [Release Checklist](docs/release-checklist.md)
 - [Go / No-Go Table](docs/go-no-go.md)

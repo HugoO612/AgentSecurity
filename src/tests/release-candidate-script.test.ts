@@ -36,7 +36,7 @@ describe('release candidate validation script', () => {
       evidencePath,
       `${JSON.stringify(
         {
-          candidateVersion: 'v1.0.0-local',
+          candidateVersion: 'v1.0.0-wsl2',
           commit: 'abc123',
           runAt: '2026-04-28T00:00:00.000Z',
           machine: 'test-machine',
@@ -228,7 +228,7 @@ describe('release candidate validation script', () => {
       evidencePath,
       `${JSON.stringify(
         {
-          candidateVersion: 'v1.0.0-local',
+          candidateVersion: 'v1.0.0-wsl2',
           commit: 'abc123',
           runAt: '2026-04-28T00:00:00.000Z',
           machine: 'test-machine',

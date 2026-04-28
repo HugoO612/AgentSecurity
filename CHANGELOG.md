@@ -4,7 +4,7 @@
 
 ### Scope
 
-- Formal local edition only.
+- Formal one-click WSL2 deployment only.
 - Runtime is limited to local WSL2 isolated execution.
 - Agent is not directly installed into Windows host runtime.
 - Missing dedicated distro is prepared by the formal installer flow.

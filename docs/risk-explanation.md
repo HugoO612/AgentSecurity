@@ -8,7 +8,7 @@ The formal release keeps the agent inside a dedicated WSL2 distro so that:
 - high-risk runtime behavior stays out of the Windows host runtime
 - support can ask one consistent set of diagnostics questions
 
-For the current public local release, this is the preferred local deployment path. It is narrower and easier to reason about than a direct host install.
+For the current public release, this is the default Windows deployment path. It is narrower and easier to reason about than a direct host install.
 
 ## Why The Formal Release Does Not Install Into Windows Directly
 
@@ -46,5 +46,5 @@ Current reason:
 - the shipped evidence and recovery model in this release are built around one controlled local isolated environment boundary
 
 Best fit today:
-- choose this Local Edition if local execution on the same Windows machine is required
+- choose the one-click WSL2 isolated deployment if Windows local execution is required
 - wait for a future cloud-hosted managed option if the user wants less local setup responsibility and less host-side recovery work

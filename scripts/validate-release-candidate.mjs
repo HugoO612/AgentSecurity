@@ -7,7 +7,7 @@ const requiredFiles = [
   'docs/real-machine-validation-template.md',
   'docs/release-evidence-template.json',
   'docs/release-checklist.md',
-  'docs/release-notes-v1.0.0-local.md',
+  'docs/release-notes-v1.0.0-wsl2.md',
   'docs/safety-boundary.md',
   'docs/install-guide.md',
   'docs/risk-explanation.md',

@@ -2,7 +2,7 @@
 
 ## Who This Release Is For
 
-AgentSecurity v1 Local Edition is the supported local Windows release for users who need the agent to stay on the same machine.
+AgentSecurity v1 is the supported Windows release for users who want the default one-click WSL2 isolated deployment.
 
 It is not the only long-term product direction. It is the current local path with the narrowest supported runtime boundary:
 
@@ -87,6 +87,6 @@ Stop and escalate if:
 
 ## Recommended Path Guidance
 
-For users who want local execution on Windows, the recommended local path is the dedicated isolated environment route used by this release.
+For Windows users, the recommended public install path is the dedicated WSL2 isolated environment route used by this release.
 
 Users who do not want local subsystem setup, local recovery responsibility, or any host-side setup work should wait for a future cloud-hosted managed offering rather than bypassing the local isolation boundary.

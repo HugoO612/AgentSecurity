@@ -1,6 +1,6 @@
-# AgentSecurity v1.0.0 Local Edition Release Notes
+# AgentSecurity v1.0.0 One-Click WSL2 Release Notes
 
-This release is the supported local Windows edition for users who need same-machine execution. It is a limited recommendation path, not a claim that every ordinary user should prefer local setup over future managed deployment options.
+This release defaults to a one-click WSL2 isolated deployment on Windows. It is the supported public install path for v1, and it keeps the agent inside a dedicated `AgentSecurity` runtime instead of installing the agent directly into the Windows host.
 
 ## One-Click Install
 
@@ -33,9 +33,9 @@ If Windows says WSL2 is disabled, enable or install WSL2, reboot if prompted, th
 
 ## Deployment Direction
 
-- Recommended local path: the WSL2 isolated route used by this release.
+- Default Windows path: the one-click WSL2 isolated route used by this release.
 - Not shipped in this release: cloud-hosted managed deployment.
-- Reason: v1 evidence, recovery, and support procedures are all built around one controlled local isolated boundary.
+- Reason: v1 evidence, recovery, and support procedures are all built around one controlled WSL2 isolation boundary.
 
 ## Release Gate
 

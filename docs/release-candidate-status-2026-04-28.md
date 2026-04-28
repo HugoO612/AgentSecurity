@@ -73,4 +73,4 @@ Decision: `GO`
 
 ## Required Next Step
 
-Publish the v1 GitHub release with the one-click installer package and the release notes in `docs/release-notes-v1.0.0-local.md`.
+Keep the public GitHub release aligned with the default one-click WSL2 deployment wording and the release notes in `docs/release-notes-v1.0.0-wsl2.md`.

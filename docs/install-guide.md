@@ -13,7 +13,7 @@ The formal release does not:
 - reuse an existing Ubuntu distro
 - support custom distro names or custom install targets
 
-This is the recommended local path for Windows users who need local execution. It is not a direct-host install path and it is not the promised fit for every future user segment.
+This is the default and recommended Windows install path for v1. It is not a direct-host install path and it is not the promised fit for every future user segment.
 
 ## Before You Start
 
