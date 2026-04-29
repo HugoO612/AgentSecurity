@@ -16,12 +16,12 @@ Typical cases:
 Use `rebuild` when the dedicated `AgentSecurity` distro exists but the installed runtime is inconsistent.
 
 What it does:
-- stops the running agent if present
+- stops OpenClaw if it is running
 - clears `/opt/agent-security/current` and `/opt/agent-security/inbox` inside the dedicated distro
 - removes local staged runtime files
-- reinstalls the bundled agent artifact
+- reinstalls the bundled OpenClaw package
 - rewrites runtime config
-- starts the agent again and runs health check
+- starts OpenClaw again and runs health check
 
 Use `rebuild` when:
 - start keeps failing
@@ -33,7 +33,7 @@ Use `rebuild` when:
 Use `delete` when the user wants to fully remove the current Agent Security environment.
 
 What it does:
-- stops the running agent if present
+- stops OpenClaw if it is running
 - unregisters the dedicated `AgentSecurity` distro
 - removes runtime state files under the controlled Agent Security paths
 - verifies that the dedicated distro is gone
@@ -66,4 +66,4 @@ If Windows restarts before installation finishes, rerun the AgentSecurity instal
 
 ### Agent startup fails
 
-If the environment installs but the agent does not start, retry start first. If startup keeps failing, use `rebuild`; if rebuild does not recover, use `delete` and reinstall from the bundled release package.
+If the environment installs but OpenClaw does not start, retry start first. If startup keeps failing, use `rebuild`; if rebuild does not recover, use `delete` and reinstall from the bundled release package.

@@ -8,12 +8,12 @@ It is not the only long-term product direction. It is the current local path wit
 
 - Windows host
 - dedicated `AgentSecurity` isolated environment
-- bundled rootfs and bundled agent package
+- bundled rootfs and bundled OpenClaw package
 - fixed install and recovery flow
 
 ## What It Changes On The Host
 
-AgentSecurity does not install the agent directly into the Windows host runtime.
+AgentSecurity does not install OpenClaw directly into the Windows host runtime.
 
 Expected Windows-side writes are limited to controlled AgentSecurity paths under `%LOCALAPPDATA%\\AgentSecurity\\v2\\`:
 
@@ -22,7 +22,7 @@ Expected Windows-side writes are limited to controlled AgentSecurity paths under
 - reports
 - dedicated distro install root
 
-It should not write agent runtime files into arbitrary user folders, reuse an existing Ubuntu environment, or switch the agent into direct host execution.
+It should not write OpenClaw runtime files into arbitrary user folders, reuse an existing Ubuntu environment, or switch the runtime into direct host execution.
 
 ## When It Needs Administrator Permission
 
@@ -36,7 +36,7 @@ If the user refuses that permission:
 
 ## What Runs With Ongoing Privilege
 
-The release does not install a permanent Windows system service for the agent.
+The release does not install a permanent Windows system service for OpenClaw.
 
 Normal runtime activity is expected to stay inside the dedicated isolated environment after setup completes. The Windows host keeps bridge state, diagnostics, and reports in controlled paths.
 

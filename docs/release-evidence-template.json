@@ -8,7 +8,7 @@
   "targetDistro": "AgentSecurity",
   "bundledArtifacts": {
     "rootfs": "bridge/assets/agent-security-rootfs.tar",
-    "agent": "bridge/assets/agent-security-agent.pkg",
+    "agent": "bridge/assets/openclaw-agent.pkg",
     "checksums": {
       "rootfsSha256": "REPLACE_ME",
       "agentSha256": "REPLACE_ME"
@@ -16,6 +16,16 @@
     "version": "REPLACE_ME",
     "source": "REPLACE_ME",
     "updatePolicy": "bundled-only"
+  },
+  "releaseArtifacts": {
+    "windowsInstaller": {
+      "path": "release/AgentSecurity Setup.exe",
+      "sha256": "REPLACE_ME",
+      "signatureStatus": "Unsigned",
+      "signaturePolicy": "unsigned-accepted",
+      "userVisibleInstallNote": "Windows may show an unknown publisher warning. Verify the SHA256 file from the GitHub Release before installing."
+    },
+    "windowsInstallerSha256File": "release/AgentSecurity Setup.exe.sha256"
   },
   "exceptionMatrix": {
     "blocking": {
@@ -197,3 +207,4 @@
     "followUpOwner": "REPLACE_ME"
   }
 }
+

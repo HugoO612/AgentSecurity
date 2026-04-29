@@ -10,7 +10,7 @@ const evidence = JSON.parse(await readFile(evidencePath, 'utf8'))
 const runRoot = resolve('.tmp', 'blocking-exception-validation', timestampForPath(new Date()))
 const committedResultPath = 'docs/blocking-exception-results-2026-04-28.json'
 const goodRootfs = resolve('bridge/assets/agent-security-rootfs.tar')
-const goodAgent = resolve('bridge/assets/agent-security-agent.pkg')
+const goodAgent = resolve('bridge/assets/openclaw-agent.pkg')
 let nextPort = Number(process.env.AGENT_SECURITY_EXCEPTION_PORT ?? 4590)
 
 await mkdir(runRoot, { recursive: true })
@@ -246,7 +246,10 @@ function buildBridgeEnv(context, extraEnv) {
     AGENT_SECURITY_BRIDGE_PORT: String(context.port),
     AGENT_SECURITY_BRIDGE_TOKEN: context.token,
     AGENT_SECURITY_ROOTFS_SHA256: manifest.artifacts.rootfs.sha256,
-    AGENT_SECURITY_AGENT_INSTALL_SHA256: manifest.artifacts.agent.sha256,
+    AGENT_SECURITY_AGENT_INSTALL_SHA256:
+      manifest.artifacts.agentPackage?.sha256 ?? manifest.artifacts.agent.sha256,
+    AGENT_SECURITY_AGENT_INSTALL_URL: 'bundled://openclaw-agent.pkg',
+    AGENT_SECURITY_AGENT_NAME: manifest.agentName ?? 'OpenClaw',
     AGENT_SECURITY_BUNDLED_ROOTFS_PATH:
       extraEnv.AGENT_SECURITY_BUNDLED_ROOTFS_PATH ?? goodRootfs,
     AGENT_SECURITY_BUNDLED_AGENT_PATH:

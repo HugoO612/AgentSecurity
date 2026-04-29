@@ -19,8 +19,8 @@ describe('page rendering', () => {
       </TestProviders>,
     )
 
-    expect(screen.getAllByText('本机隔离运行').length).toBeGreaterThan(0)
-    expect(screen.getByText(/当前 agent 运行在隔离环境中/)).toBeInTheDocument()
+    expect(screen.getAllByText('本机隔离 Linux 环境').length).toBeGreaterThan(0)
+    expect(screen.getByText(/当前 OpenClaw 运行在隔离环境中/)).toBeInTheDocument()
   })
 
   it('renders rebuild confirmation consequence copy', () => {

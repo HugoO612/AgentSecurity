@@ -10,8 +10,12 @@ const version = process.argv[2] ?? new Date().toISOString().slice(0, 10).replace
 const sourceCommit = await git(['rev-parse', '--short', 'HEAD']).catch(() => 'unknown')
 const assetDir = resolve('bridge/assets')
 const rootfsPath = resolve(assetDir, 'agent-security-rootfs.tar')
-const agentPath = resolve(assetDir, 'agent-security-agent.pkg')
+const agentPath = resolve(assetDir, 'openclaw-agent.pkg')
 const manifestPath = resolve(assetDir, 'release-assets-manifest.json')
+const bundledOpenClawPath =
+  process.env.AGENT_SECURITY_OPENCLAW_PAYLOAD_PATH?.trim()
+    ? resolve(process.env.AGENT_SECURITY_OPENCLAW_PAYLOAD_PATH.trim())
+    : null
 
 await mkdir(assetDir, { recursive: true })
 await mkdir(resolve('.tmp'), { recursive: true })
@@ -101,34 +105,61 @@ while true; do sleep 30; done
 EOF
 chmod +x "$agent_dir/bin/start-agent-security.sh"
 cat > "$agent_dir/manifest.json" <<EOF
-{"name":"agent-security-agent","version":"${'${ASSET_VERSION}'}","entrypoint":"/opt/agent-security/current/bin/start-agent-security.sh","packageFormat":"agent-security-tar-pkg-v1"}
+{"name":"agent-security-agent","agentName":"OpenClaw","version":"${'${ASSET_VERSION}'}","entrypoint":"/opt/agent-security/current/bin/start-agent-security.sh","packageFormat":"agent-security-tar-pkg-v1"}
 EOF
-tar --numeric-owner --owner=0 --group=0 -C "$agent_dir" -cf "${'${ASSET_DIR}'}/agent-security-agent.pkg" .
+tar --numeric-owner --owner=0 --group=0 -C "$agent_dir" -cf "${'${ASSET_DIR}'}/openclaw-agent.pkg" .
 `
 
 await writeFile(buildScriptPath, shell.replace(/\r\n/g, '\n'), 'utf8')
 
-try {
-  await execFileAsync(
-    'wsl.exe',
-    [
-      '-d',
-      'Ubuntu',
-      '--',
-      'env',
-      `ASSET_DIR=${wslAssetDir}`,
-      `ASSET_VERSION=${version}`,
-      'sh',
-      wslBuildScriptPath,
-    ],
-    {
-      env: process.env,
-      timeout: 120_000,
-      maxBuffer: 1024 * 1024,
-    },
-  )
-} finally {
-  await rm(buildScriptPath, { force: true })
+if (bundledOpenClawPath) {
+  try {
+    await execFileAsync(
+      'wsl.exe',
+      [
+        '-d',
+        'Ubuntu',
+        '--',
+        'env',
+        `ASSET_DIR=${wslAssetDir}`,
+        `ASSET_VERSION=${version}`,
+        'sh',
+        wslBuildScriptPath,
+      ],
+      {
+        env: process.env,
+        timeout: 120_000,
+        maxBuffer: 1024 * 1024,
+      },
+    )
+  } finally {
+    await rm(buildScriptPath, { force: true })
+  }
+  await rm(agentPath, { force: true })
+  await copyFileCompat(bundledOpenClawPath, agentPath)
+} else {
+  try {
+    await execFileAsync(
+      'wsl.exe',
+      [
+        '-d',
+        'Ubuntu',
+        '--',
+        'env',
+        `ASSET_DIR=${wslAssetDir}`,
+        `ASSET_VERSION=${version}`,
+        'sh',
+        wslBuildScriptPath,
+      ],
+      {
+        env: process.env,
+        timeout: 120_000,
+        maxBuffer: 1024 * 1024,
+      },
+    )
+  } finally {
+    await rm(buildScriptPath, { force: true })
+  }
 }
 
 const [rootfsSha256, agentSha256] = await Promise.all([
@@ -141,6 +172,7 @@ const manifest = {
   generatedAt: new Date().toISOString(),
   source: 'scripts/build-release-assets.mjs using WSL Ubuntu static busybox',
   sourceCommit,
+  agentName: 'OpenClaw',
   packageFormat: 'agent-security-tar-pkg-v1',
   updatePolicy: 'bundled-only',
   artifacts: {
@@ -148,8 +180,8 @@ const manifest = {
       path: 'bridge/assets/agent-security-rootfs.tar',
       sha256: rootfsSha256,
     },
-    agent: {
-      path: 'bridge/assets/agent-security-agent.pkg',
+    agentPackage: {
+      path: 'bridge/assets/openclaw-agent.pkg',
       sha256: agentSha256,
     },
   },
@@ -175,4 +207,9 @@ function windowsPathToWsl(path) {
 async function git(args) {
   const { stdout } = await execFileAsync('git', args)
   return stdout.trim()
+}
+
+async function copyFileCompat(source, target) {
+  const content = await readFile(source)
+  await writeFile(target, content)
 }

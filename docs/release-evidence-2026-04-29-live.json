@@ -1,7 +1,7 @@
 {
   "candidateVersion": "2026.04.28-rc1",
-  "commit": "88e3cb6",
-  "runAt": "2026-04-28T10:19:42.586Z",
+  "commit": "0ce54c8",
+  "runAt": "2026-04-29T10:21:43.023Z",
   "machine": "墨盒",
   "mode": "release-candidate-validation",
   "executionMode": "live",
@@ -10,12 +10,22 @@
     "rootfs": "bridge/assets/agent-security-rootfs.tar",
     "agent": "bridge/assets/openclaw-agent.pkg",
     "checksums": {
-      "rootfsSha256": "c8393f681033d6b41cf3ca0b8863193fd6dd3fd3efbd7808faf79ff55b5a9159",
-      "agentSha256": "c96935f893a0235af6fb6cafa1962212b153ff8a9c6f51bd30bbe7fd8997e6c0"
+      "rootfsSha256": "9a6aefb429f2208933d56b122dbaf40c1a5d15e06cfaddd361f380ec277fab5d",
+      "agentSha256": "57b93134c89a3a51c5bcf00ad5b395500dbc013532d4d13ebc9247846abb237b"
     },
     "version": "2026.04.28-rc1",
     "source": "scripts/build-release-assets.mjs using WSL Ubuntu static busybox",
     "updatePolicy": "bundled-only"
+  },
+  "releaseArtifacts": {
+    "windowsInstaller": {
+      "path": "release/AgentSecurity Setup.exe",
+      "sha256": "4de96d7274d10adcb7ec13add7ac537da17cef2c34f3968d2db41635a2e2b742",
+      "signatureStatus": "Unsigned",
+      "signaturePolicy": "unsigned-accepted",
+      "userVisibleInstallNote": "Windows may show an unknown publisher warning. Verify the SHA256 file from the GitHub Release before installing."
+    },
+    "windowsInstallerSha256File": "release/AgentSecurity Setup.exe.sha256"
   },
   "exceptionMatrix": {
     "blocking": {
@@ -41,19 +51,19 @@
         "required": false,
         "status": "documented",
         "documentationReference": "docs/exception-matrix-validation.md#wsl_disabled",
-        "recoverySummary": "Enable WSL2 from Windows features or the official installer path, reboot if requested, then rerun AgentSecurity install."
+        "recoverySummary": "Prompt the user to enable WSL2, then rerun precheck and install."
       },
       "reboot_interrupted": {
         "required": false,
         "status": "documented",
         "documentationReference": "docs/exception-matrix-validation.md#reboot_interrupted",
-        "recoverySummary": "After Windows restarts, rerun the installer so it can check the current state and continue or recommend reinstall."
+        "recoverySummary": "Reopen the installer after reboot and follow the guided resume or reinstall path."
       },
       "startup_failure": {
         "required": false,
         "status": "documented",
         "documentationReference": "docs/exception-matrix-validation.md#startup_failure",
-        "recoverySummary": "Retry start first; if it still fails, rebuild the environment or delete and reinstall from the bundled assets."
+        "recoverySummary": "Use retry, rebuild, or delete and reinstall based on the recovery guidance."
       }
     }
   },
@@ -67,7 +77,7 @@
       "finalStage": "completed",
       "afterState": "running",
       "recoveryAction": null,
-      "evidence": "bd367d0b-adb5-4a0a-b49e-d2630c341f6d"
+      "evidence": "7a936d38-5d4c-42e9-aea0-e5090610c2f8"
     },
     {
       "action": "stop_agent",
@@ -77,7 +87,7 @@
       "finalStage": "finalizing",
       "afterState": "stopped",
       "recoveryAction": null,
-      "evidence": "64d42044-1afe-459a-be56-d2f9238444fc"
+      "evidence": "8a59c349-5263-4496-946f-4692de71ee65"
     },
     {
       "action": "start_agent",
@@ -87,7 +97,7 @@
       "finalStage": "finalizing",
       "afterState": "running",
       "recoveryAction": null,
-      "evidence": "7ad8b6d9-6a47-4842-8bcd-3ed7cb702338"
+      "evidence": "9af4d72c-524b-4eda-b529-0f387ba2ed28"
     },
     {
       "action": "rebuild_environment",
@@ -97,7 +107,7 @@
       "finalStage": "completed",
       "afterState": "running",
       "recoveryAction": null,
-      "evidence": "72994b15-533a-40e2-80fc-191dd8541657"
+      "evidence": "8fc35420-26f6-4110-bda7-45bf21183216"
     },
     {
       "action": "delete_environment",
@@ -107,7 +117,7 @@
       "finalStage": "completed",
       "afterState": "not-installed",
       "recoveryAction": null,
-      "evidence": "4bde82d1-d55f-4d29-b0a3-d4a431183894"
+      "evidence": "f0559d4d-235e-4683-ad13-45b9a3ea2c0d"
     }
   ],
   "exceptionValidation": [
@@ -123,20 +133,20 @@
     },
     {
       "case": "wsl_disabled",
-      "triggerMethod": "documented limitation for v1; not required as live hard-gate evidence",
+      "triggerMethod": "NOT_VALIDATED",
       "errorCode": "DOCUMENTED_LIMITATION",
-      "userVisibleMessage": "WSL2 is not enabled or available on this Windows machine.",
-      "recommendedRecovery": "Enable WSL2, reboot if Windows asks for it, then rerun the AgentSecurity installer.",
+      "userVisibleMessage": "Not validated in this live lifecycle run.",
+      "recommendedRecovery": "Run the dedicated exception validation case on a controlled Windows machine.",
       "actualRecoveryResult": "documented only",
       "evidence": "documentation-only",
       "documentationReference": "docs/exception-matrix-validation.md#wsl_disabled"
     },
     {
       "case": "reboot_interrupted",
-      "triggerMethod": "documented limitation for v1; not required as live hard-gate evidence",
+      "triggerMethod": "NOT_VALIDATED",
       "errorCode": "DOCUMENTED_LIMITATION",
-      "userVisibleMessage": "Installation was interrupted by a Windows restart before completion.",
-      "recommendedRecovery": "After reboot, rerun the installer so it can check current state and continue or recommend reinstall.",
+      "userVisibleMessage": "Not validated in this live lifecycle run.",
+      "recommendedRecovery": "Run the dedicated exception validation case on a controlled Windows machine.",
       "actualRecoveryResult": "documented only",
       "evidence": "documentation-only",
       "documentationReference": "docs/exception-matrix-validation.md#reboot_interrupted"
@@ -163,10 +173,10 @@
     },
     {
       "case": "startup_failure",
-      "triggerMethod": "documented limitation for v1; not required as live hard-gate evidence",
+      "triggerMethod": "NOT_VALIDATED",
       "errorCode": "DOCUMENTED_LIMITATION",
-      "userVisibleMessage": "The AgentSecurity environment installed, but the agent did not start successfully.",
-      "recommendedRecovery": "Retry start first; if it still fails, rebuild the environment or delete and reinstall.",
+      "userVisibleMessage": "Not validated in this live lifecycle run.",
+      "recommendedRecovery": "Run the dedicated exception validation case on a controlled Windows machine.",
       "actualRecoveryResult": "documented only",
       "evidence": "documentation-only",
       "documentationReference": "docs/exception-matrix-validation.md#startup_failure"
@@ -213,4 +223,3 @@
     "followUpOwner": "release-lead"
   }
 }
-

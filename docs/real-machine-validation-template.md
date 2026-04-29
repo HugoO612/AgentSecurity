@@ -13,7 +13,7 @@ Use this template for every release candidate validation run.
 - WSL status before install:
 - execution mode: `live` only
 - bundled rootfs path:
-- bundled agent artifact path:
+- bundled OpenClaw package path:
 - bundled checksum:
 - bundled artifact version:
 - bundled artifact source:
@@ -38,7 +38,7 @@ Required steps:
 4. confirm WSL enablement / reboot path if needed
 5. create dedicated `AgentSecurity` distro
 6. import bundled rootfs
-7. install bundled agent artifact
+7. install bundled OpenClaw package
 8. initial start
 9. stop
 10. start again

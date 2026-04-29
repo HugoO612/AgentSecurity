@@ -12,7 +12,11 @@ const evidencePath =
   process.argv[2] ?? `docs/release-evidence-${new Date().toISOString().slice(0, 10)}.json`
 
 const rootfsSha256 = manifest.artifacts.rootfs.sha256
-const agentSha256 = manifest.artifacts.agent.sha256
+const agentArtifact = manifest.artifacts.agentPackage ?? manifest.artifacts.agent
+const agentSha256 = agentArtifact.sha256
+const installerPath = 'release/AgentSecurity Setup.exe'
+const installerShaPath = `${installerPath}.sha256`
+const installerSha256 = await readInstallerSha256(installerShaPath).catch(() => undefined)
 const commit = await git(['rev-parse', '--short', 'HEAD']).catch(() => 'unknown')
 const machine = await host(['$env:COMPUTERNAME']).catch(() => 'unknown')
 const lifecycle = []
@@ -78,7 +82,7 @@ try {
     targetDistro: 'AgentSecurity',
     bundledArtifacts: {
       rootfs: manifest.artifacts.rootfs.path,
-      agent: manifest.artifacts.agent.path,
+      agent: agentArtifact.path,
       checksums: {
         rootfsSha256,
         agentSha256,
@@ -87,6 +91,19 @@ try {
       source: manifest.source,
       updatePolicy: manifest.updatePolicy,
     },
+    releaseArtifacts: installerSha256
+      ? {
+          windowsInstaller: {
+            path: installerPath,
+            sha256: installerSha256,
+            signatureStatus: 'Unsigned',
+            signaturePolicy: 'unsigned-accepted',
+            userVisibleInstallNote:
+              'Windows may show an unknown publisher warning. Verify the SHA256 file from the GitHub Release before installing.',
+          },
+          windowsInstallerSha256File: installerShaPath,
+        }
+      : undefined,
     exceptionMatrix: {
       blocking: {
         permission_denied: { required: true, status: 'pending' },
@@ -310,4 +327,13 @@ function command(program, args) {
       }
     })
   })
+}
+
+async function readInstallerSha256(path) {
+  const text = await readFile(path, 'utf8')
+  const match = text.match(/[0-9a-f]{64}/i)
+  if (!match) {
+    throw new Error(`No SHA256 found in ${path}`)
+  }
+  return match[0].toLowerCase()
 }

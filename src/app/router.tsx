@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, createHashRouter } from 'react-router-dom'
 import { AppShell } from './shell'
 import { EntryPage } from './pages/EntryPage'
 import { InstallFailedPage } from './pages/InstallFailedPage'
@@ -10,12 +10,18 @@ import { PreinstallPage } from './pages/PreinstallPage'
 import { RecoveryPage } from './pages/RecoveryPage'
 import { StatusPage } from './pages/StatusPage'
 
-export const router = createBrowserRouter([
+const createRouter =
+  typeof window !== 'undefined' && window.location.protocol === 'file:'
+    ? createHashRouter
+    : createBrowserRouter
+
+export const router = createRouter([
   {
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <EntryPage /> },
+      { index: true, element: <PreinstallPage /> },
+      { path: 'entry', element: <EntryPage /> },
       { path: 'preinstall', element: <PreinstallPage /> },
       { path: 'precheck', element: <PrecheckPage /> },
       { path: 'installing', element: <InstallingPage /> },

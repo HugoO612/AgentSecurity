@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto'
+import { execFile } from 'node:child_process'
 import { access, readFile } from 'node:fs/promises'
 import { basename, resolve } from 'node:path'
+import { promisify } from 'node:util'
+
+const execFileAsync = promisify(execFile)
 
 const requiredFiles = [
   'docs/go-no-go.md',
@@ -44,7 +48,7 @@ const documentedLimitationCases = [
 const assetRoot = process.env.AGENT_SECURITY_RELEASE_ASSET_ROOT || 'bridge/assets'
 const requiredAssetPaths = {
   rootfs: resolve(assetRoot, 'agent-security-rootfs.tar'),
-  agent: resolve(assetRoot, 'agent-security-agent.pkg'),
+  agent: resolve(assetRoot, 'openclaw-agent.pkg'),
 }
 const sha256Pattern = /^[0-9a-f]{64}$/i
 const placeholderValues = new Set(['REPLACE_ME', 'NOT_VALIDATED', 'missing', ''])
@@ -129,6 +133,7 @@ async function validateReleaseEvidence(evidence, manifest) {
   await validateAssetChecksum('rootfs', rootfsChecksum)
   await validateAssetChecksum('agent', agentChecksum)
   validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecksum)
+  await validateWindowsInstaller(evidence)
 
   if (!isRealValue(evidence.candidateVersion)) {
     throw new Error('candidateVersion is required.')
@@ -253,6 +258,7 @@ function validateExceptionMatrix(evidence) {
 }
 
 function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecksum) {
+  const agentArtifact = manifest.artifacts?.agentPackage ?? manifest.artifacts?.agent
   if (!manifest) {
     throw new Error('release-assets-manifest.json is required for public launch evidence.')
   }
@@ -270,13 +276,16 @@ function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecks
   if (manifest.artifacts?.rootfs?.path !== 'bridge/assets/agent-security-rootfs.tar') {
     throw new Error('Asset manifest rootfs path must be fixed.')
   }
-  if (manifest.artifacts?.agent?.path !== 'bridge/assets/agent-security-agent.pkg') {
+  if (agentArtifact?.path !== 'bridge/assets/openclaw-agent.pkg') {
     throw new Error('Asset manifest agent path must be fixed.')
+  }
+  if (manifest.agentName !== 'OpenClaw') {
+    throw new Error('Asset manifest agentName must be "OpenClaw" for the public Windows release.')
   }
   if (manifest.artifacts?.rootfs?.sha256 !== rootfsChecksum.toLowerCase()) {
     throw new Error('Asset manifest rootfs checksum must match evidence.')
   }
-  if (manifest.artifacts?.agent?.sha256 !== agentChecksum.toLowerCase()) {
+  if (agentArtifact?.sha256 !== agentChecksum.toLowerCase()) {
     throw new Error('Asset manifest agent checksum must match evidence.')
   }
 }
@@ -318,6 +327,47 @@ async function validateAssetChecksum(kind, expectedChecksum) {
       `Bundled ${kind} checksum mismatch for ${basename(path)}: expected ${expectedChecksum.toLowerCase()} but received ${actualChecksum}.`,
     )
   }
+}
+
+async function validateWindowsInstaller(evidence) {
+  const installer = evidence.releaseArtifacts?.windowsInstaller
+  if (!installer) {
+    throw new Error('releaseArtifacts.windowsInstaller is required for public Windows EXE release evidence.')
+  }
+  if (!isRealValue(installer.path)) {
+    throw new Error('releaseArtifacts.windowsInstaller.path is required.')
+  }
+  validateSha256('releaseArtifacts.windowsInstaller.sha256', installer.sha256)
+  if (!['Valid', 'Unsigned'].includes(installer.signatureStatus)) {
+    throw new Error('releaseArtifacts.windowsInstaller.signatureStatus must be "Valid" or "Unsigned".')
+  }
+
+  const installerPath = resolve(installer.path)
+  let content
+  try {
+    content = await readFile(installerPath)
+  } catch {
+    throw new Error(`Missing Windows installer at ${formatPathForMessage(installerPath)}.`)
+  }
+
+  const actualChecksum = createHash('sha256').update(content).digest('hex')
+  if (actualChecksum !== installer.sha256.toLowerCase()) {
+    throw new Error(
+      `Windows installer checksum mismatch for ${basename(installerPath)}: expected ${installer.sha256.toLowerCase()} but received ${actualChecksum}.`,
+    )
+  }
+
+  if (installer.signatureStatus === 'Unsigned') {
+    if (installer.signaturePolicy !== 'unsigned-accepted') {
+      throw new Error('Unsigned Windows installer evidence requires signaturePolicy "unsigned-accepted".')
+    }
+    if (!isRealValue(installer.userVisibleInstallNote)) {
+      throw new Error('Unsigned Windows installer evidence requires userVisibleInstallNote.')
+    }
+    return
+  }
+
+  await execFileAsync('node', ['scripts/verify-windows-signature.mjs', installerPath])
 }
 
 function formatPathForMessage(path) {

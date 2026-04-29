@@ -1,8 +1,8 @@
 import type { CopyKey } from './keys'
 
 export const zhCN: Record<CopyKey, string> = {
-  COPY_TITLE_ENTRY: '安全运行 agent',
-  COPY_TITLE_PREINSTALL: '开始前，请先确认这次安装会做什么',
+  COPY_TITLE_ENTRY: '安全运行 OpenClaw',
+  COPY_TITLE_PREINSTALL: '开始前，请先确认这次隔离 Linux 环境与 OpenClaw 安装会做什么',
   COPY_TITLE_PRECHECK: '先检查你的设备是否已经准备好',
   COPY_TITLE_INSTALLING: '正在准备安全运行环境',
   COPY_TITLE_INSTALL_FAIL: '安装没有完成',
@@ -15,19 +15,19 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_DESC_ENTRY:
     '推荐在隔离环境中运行，减少对本机系统的直接影响。',
   COPY_DESC_SCOPE:
-    'agent 默认运行在隔离环境中，而不是直接在 Windows 主环境中运行。',
+    'OpenClaw 默认运行在隔离 Linux 环境中，而不是直接在 Windows 主环境中运行。',
   COPY_DESC_PERMISSION:
     '首次安装时，系统可能请求必要权限以创建隔离运行环境。',
   COPY_DESC_STORAGE:
     '运行环境会占用一定磁盘空间，后续你可以重建或删除该环境。',
   COPY_DESC_INSTALLING:
-    '这可能需要几分钟。过程中系统可能会请求一次必要权限。',
+    '这可能需要几分钟。过程中系统可能会请求一次必要权限，用来准备隔离 Linux 环境和 OpenClaw 运行环境。',
   COPY_DESC_FAIL_SAFE:
-    '你的 Windows 主环境没有被直接用于运行 agent。你可以按下面的方式继续。',
+    '你的 Windows 主环境没有被直接用于运行 OpenClaw。你可以按下面的方式继续。',
   COPY_DESC_STATUS_SAFE:
-    '当前 agent 运行在隔离环境中；如环境异常，你可以随时重建或删除该环境。',
+    '当前 OpenClaw 运行在隔离环境中；如环境异常，你可以随时重建或删除该环境。',
   COPY_DESC_RECOVERY:
-    '如果 agent 无法正常运行，你可以先尝试重试；如果问题持续，可以重建环境；如果不再需要，也可以彻底删除。',
+    '如果 OpenClaw 无法正常运行，你可以先尝试重试；如果问题持续，可以重建环境；如果不再需要，也可以彻底删除。',
   COPY_DESC_CONNECTION_FAILURE:
     '当前页面还没有建立到本地安全组件的受信连接，因此不会显示伪造的成功状态。',
   COPY_ERR_UNSUPPORTED_SYSTEM: '你的设备暂时不支持这种隔离运行方式。',
@@ -39,14 +39,14 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_ERR_PARTIAL_INSTALL: '环境只完成了一部分，建议进入恢复中心继续处理。',
   COPY_ERR_ENV_CORRUPTED: '当前运行环境状态异常，建议先重建环境。',
   COPY_ERR_UNKNOWN: '这次没有完成，你可以先重试；如果问题持续，进入恢复中心。',
-  COPY_BTN_CHOOSE_LOCAL: '选择本机隔离运行',
+  COPY_BTN_CHOOSE_LOCAL: '选择本机隔离 Linux 环境',
   COPY_BTN_CONTINUE: '继续',
-  COPY_BTN_START_INSTALL: '开始安装',
+  COPY_BTN_START_INSTALL: '一键安装隔离 Linux 环境与 OpenClaw',
   COPY_BTN_FIX_FIRST: '查看修复方法',
   COPY_BTN_CONTINUE_ANYWAY: '仍要继续',
   COPY_BTN_RETRY_INSTALL: '重试安装',
   COPY_BTN_OPEN_RECOVERY: '进入恢复中心',
-  COPY_BTN_START_AGENT: '启动 agent',
+  COPY_BTN_START_AGENT: '启动 OpenClaw',
   COPY_BTN_STOP_AGENT: '停止运行',
   COPY_BTN_RESTART_ENV: '重启环境',
   COPY_BTN_RETRY: '立即重试',
@@ -63,12 +63,12 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_CONFIRM_PERMISSION_BODY:
     '为了完成这一步，系统可能请求必要权限，用于创建或修复隔离运行环境。',
   COPY_CONFIRM_REBUILD_BODY:
-    '这会删除当前环境并重新创建。该环境中的临时内容可能丢失，但不会把 agent 直接切到 Windows 主环境里运行。',
+    '这会删除当前环境并重新创建。该环境中的临时内容可能丢失，但不会把 OpenClaw 直接切到 Windows 主环境里运行。',
   COPY_CONFIRM_REBUILD_CHECK: '我知道重建会清空当前隔离环境中的内容。',
   COPY_CONFIRM_PERMISSION_IMPACT: '这一步会请求系统授权，以继续当前安装或恢复动作。',
-  COPY_CONFIRM_PERMISSION_SAFE: '不会把 agent 切换到 Windows 主环境直接运行。',
+  COPY_CONFIRM_PERMISSION_SAFE: '不会把 OpenClaw 切换到 Windows 主环境直接运行。',
   COPY_CONFIRM_REBUILD_IMPACT: '会删除当前隔离环境并重新创建，当前环境内的临时内容可能丢失。',
-  COPY_CONFIRM_REBUILD_SAFE: '不会改成在 Windows 主环境直接运行，也不会自动删除你的整机内容。',
+  COPY_CONFIRM_REBUILD_SAFE: '不会改成在 Windows 主环境直接运行 OpenClaw，也不会自动删除你的整机内容。',
   COPY_CONFIRM_DELETE_BODY:
     '删除后，这个隔离运行环境及其中内容将被移除。你之后仍可重新安装。',
   COPY_CONFIRM_DELETE_SCOPE: '这不会自动删除你的整个 Windows 系统内容。',
@@ -97,14 +97,14 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_LABEL_DIAGNOSTICS: '诊断摘要',
   COPY_LABEL_RECOMMENDED_NEXT: '推荐下一步',
   COPY_HINT_PERMISSION_PROMPT: '系统可能会请求一次必要权限。',
-  COPY_HINT_REBUILD_IMPACT: '会清空当前隔离环境中的内容，但不会把 agent 切到 Windows 主环境运行。',
+  COPY_HINT_REBUILD_IMPACT: '会清空当前隔离环境中的内容，但不会把 OpenClaw 切到 Windows 主环境运行。',
   COPY_HINT_DELETE_IMPACT: '会删除隔离环境及其中内容，之后需要重新安装才能继续本机运行。',
   COPY_HINT_SAFE_SCOPE: '始终保持本机隔离运行，减少对 Windows 主环境的直接影响。',
   COPY_HINT_ACTION_REQUIRED: '需要进一步处理',
   COPY_PROMISE_ISOLATED: '默认运行在隔离环境中',
   COPY_PROMISE_RECOVERABLE: '出问题后可重试、重建环境或删除环境',
   COPY_PROMISE_SYSTEM_TOOL: '更像系统工具，而不是一次性安装页',
-  COPY_ENTRY_LOCAL_TITLE: '本机隔离运行',
+  COPY_ENTRY_LOCAL_TITLE: '本机隔离 Linux 环境',
   COPY_ENTRY_LOCAL_ITEM_1: '与主系统分开运行，减少直接影响。',
   COPY_ENTRY_LOCAL_ITEM_2: '后续可以重建环境或删除环境。',
   COPY_ENTRY_LOCAL_ITEM_3: '首次安装需要准备运行环境并占用一定磁盘空间。',
@@ -118,7 +118,7 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_PRECHECK_FIX_ITEM_1: '先处理阻塞项，再重新检查。',
   COPY_PRECHECK_FIX_ITEM_2: '若仅有警告项，可在理解风险后继续。',
   COPY_PRECHECK_FIX_ITEM_3: '若问题持续，请导出诊断包并联系支持。',
-  COPY_INSTALLING_PROGRESS_TITLE: '正在准备本机隔离运行',
+  COPY_INSTALLING_PROGRESS_TITLE: '正在准备隔离 Linux 环境与 OpenClaw 运行环境',
   COPY_INSTALL_FAILED_RETRY_TITLE: '优先重试',
   COPY_INSTALL_FAILED_RETRY_DESC: '适用于网络波动、初始化超时或权限未完成的临时失败。',
   COPY_INSTALL_FAILED_REBUILD_TITLE: '再决定是否重建',
@@ -130,14 +130,14 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_STATUS_PRIMARY_ACTIONS: '主操作',
   COPY_STATUS_MAINTENANCE_TITLE: '维护操作',
   COPY_STATUS_NO_LAST_ACTION: '尚未执行动作',
-  COPY_RECOVERY_SCOPE_NOTE: '所有恢复动作都围绕隔离环境本身，不把 agent 切到 Windows 主环境运行。',
+  COPY_RECOVERY_SCOPE_NOTE: '所有恢复动作都围绕隔离环境本身，不把 OpenClaw 切到 Windows 主环境运行。',
   COPY_NOTICE_BRIDGE_FALLBACK:
     '当前无法连接本地安全组件，请先恢复本地 bridge 连接后再继续。',
   COPY_NOTICE_DIAGNOSTICS_COPIED: '诊断摘要已复制。',
   COPY_DEBUG_SCENARIO_TITLE: '场景模板',
   COPY_STEP_CHECK: '检查系统能力',
   COPY_STEP_CREATE: '创建隔离环境',
-  COPY_STEP_CONFIGURE: '配置 agent 运行环境',
+  COPY_STEP_CONFIGURE: '配置 OpenClaw 运行环境',
   COPY_STEP_VERIFY: '完成验证',
   COPY_CHECK_SYSTEM_VERSION_TITLE: '系统版本',
   COPY_CHECK_SYSTEM_VERSION_DESC: '确认你的设备支持本机隔离运行所需的基础条件。',

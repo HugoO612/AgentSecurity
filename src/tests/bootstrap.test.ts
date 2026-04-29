@@ -62,4 +62,26 @@ describe('bootstrap validation', () => {
       expect(result.code).toBe('bootstrap_mock_forbidden_in_production')
     }
   })
+
+  it('accepts desktop bootstrap when the renderer origin is null', () => {
+    Object.defineProperty(globalThis, 'window', {
+      value: {
+        location: {
+          origin: 'null',
+        },
+        __AGENT_SECURITY_BOOTSTRAP__: {
+          version: 'v1',
+          mode: 'production',
+          sessionToken: 'desktop-token',
+          bridgeBaseUrl: 'http://127.0.0.1:4319',
+          appOrigin: 'null',
+          allowMockFallback: false,
+        },
+      },
+      configurable: true,
+    })
+
+    const result = resolveBootstrap()
+    expect(result.ok).toBe(true)
+  })
 })

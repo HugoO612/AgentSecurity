@@ -9,6 +9,7 @@ Release is `NO-GO` if any of the following is true:
 
 - live mode still depends on `dev-shim` for install, start, stop, delete, or rebuild
 - production config allows non-`AgentSecurity` distro, non-bundled installer source, or weak checksum
+- public EXE is missing, has a mismatched SHA256, or does not record whether it is `Valid` or `Unsigned`
 - delete or rebuild can leave the product in an unrecoverable state
 - there is any unexplained host-impact behavior that may touch non-controlled Windows locations
 - support bundle or command audit can leak tokens, raw authorization headers, or uncontrolled host paths
@@ -19,11 +20,12 @@ Release is `NO-GO` if any of the following is true:
 
 All of the following must be true:
 
-- `npm test`, `npm run lint`, and `npm run build` pass on the release candidate commit
+- `npm test`, `npm run lint`, `npm run build`, and `npm run build:desktop` pass on the release candidate commit
 - release evidence explicitly records `executionMode` as `live`
 - candidate package is configured for bundled assets only
 - target distro is fixed to `AgentSecurity`
-- candidate package contains the real files `bridge/assets/agent-security-rootfs.tar` and `bridge/assets/agent-security-agent.pkg`
+- candidate package contains the real files `bridge/assets/agent-security-rootfs.tar` and `bridge/assets/openclaw-agent.pkg`
+- public Windows release artifact is `AgentSecurity Setup.exe`, has a matching SHA256, and records signature status
 - release evidence records the artifact version, SHA256, fixed path, and source for the bundled assets
 - install, start, stop, rebuild, and delete pass in `live` mode on target Windows machines
 - `permission_denied`, `artifact_missing`, `checksum_mismatch`, and `delete_failure` are validated with real evidence
@@ -42,3 +44,4 @@ Record each release decision with:
 - decision: `go`, `hold`, or `rollback`
 - blocking reasons
 - required follow-up owner
+

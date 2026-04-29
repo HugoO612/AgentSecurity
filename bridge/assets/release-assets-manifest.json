@@ -1,18 +1,19 @@
 {
   "version": "2026.04.28-rc1",
-  "generatedAt": "2026-04-28T10:18:57.759Z",
+  "generatedAt": "2026-04-28T14:06:31.581Z",
   "source": "scripts/build-release-assets.mjs using WSL Ubuntu static busybox",
-  "sourceCommit": "88e3cb6",
+  "sourceCommit": "0ce54c8",
+  "agentName": "OpenClaw",
   "packageFormat": "agent-security-tar-pkg-v1",
   "updatePolicy": "bundled-only",
   "artifacts": {
     "rootfs": {
       "path": "bridge/assets/agent-security-rootfs.tar",
-      "sha256": "c8393f681033d6b41cf3ca0b8863193fd6dd3fd3efbd7808faf79ff55b5a9159"
+      "sha256": "9a6aefb429f2208933d56b122dbaf40c1a5d15e06cfaddd361f380ec277fab5d"
     },
-    "agent": {
-      "path": "bridge/assets/agent-security-agent.pkg",
-      "sha256": "c96935f893a0235af6fb6cafa1962212b153ff8a9c6f51bd30bbe7fd8997e6c0"
+    "agentPackage": {
+      "path": "bridge/assets/openclaw-agent.pkg",
+      "sha256": "57b93134c89a3a51c5bcf00ad5b395500dbc013532d4d13ebc9247846abb237b"
     }
   }
 }

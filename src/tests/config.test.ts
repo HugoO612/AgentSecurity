@@ -21,7 +21,8 @@ describe('bridge config', () => {
 
     expect(config.mode).toBe('dev')
     expect(config.targetDistro).toBe('AgentSecurity')
-    expect(config.installerDownloadUrl).toBe('bundled://agent-security-agent.pkg')
+    expect(config.installerDownloadUrl).toBe('bundled://openclaw-agent.pkg')
+    expect(config.bundledAgentName).toBe('OpenClaw')
   })
 
   it('rejects production mode when dev shim is enabled', async () => {
@@ -71,7 +72,7 @@ describe('bridge config', () => {
   it('accepts production mode only with bundled assets and a real checksum', async () => {
     const root = await mkdtemp(join(tmpdir(), 'agent-security-config-'))
     const rootfs = join(root, 'agent-security-rootfs.tar')
-    const agent = join(root, 'agent-security-agent.pkg')
+    const agent = join(root, 'openclaw-agent.pkg')
     await writeFile(rootfs, 'rootfs', 'utf8')
     await writeFile(agent, 'agent', 'utf8')
 
@@ -93,6 +94,7 @@ describe('bridge config', () => {
     expect(config.bundledRootfsChecksum).toBe(
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
     )
+    expect(config.bundledAgentName).toBe('OpenClaw')
 
     await rm(root, { recursive: true, force: true })
   })

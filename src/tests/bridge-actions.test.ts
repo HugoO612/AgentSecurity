@@ -29,11 +29,12 @@ const baseConfig: BridgeConfig = {
     'C:\\AgentSecurity\\v2\\diagnostics',
     'C:\\AgentSecurity\\v2\\reports',
   ],
-  installerDownloadUrl: 'bundled://agent-security-agent.pkg',
+  installerDownloadUrl: 'bundled://openclaw-agent.pkg',
   installerChecksum: '0123456789abcdef',
   bundledRootfsChecksum: 'abcdef0123456789',
   bundledRootfsPath: 'C:\\AgentSecurity\\bundled\\agent-security-rootfs.tar',
-  bundledAgentArtifactPath: 'C:\\AgentSecurity\\bundled\\agent-security-agent.pkg',
+  bundledAgentArtifactPath: 'C:\\AgentSecurity\\bundled\\openclaw-agent.pkg',
+  bundledAgentName: 'OpenClaw',
 }
 
 afterEach(() => {

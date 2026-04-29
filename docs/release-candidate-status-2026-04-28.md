@@ -1,7 +1,7 @@
 # Agent Security Candidate Status
 
 Date: 2026-04-28  
-Commit: `88e3cb6`  
+Commit: `0ce54c8`  
 Decision: `GO`
 
 ## Verified In This Workspace
@@ -9,14 +9,14 @@ Decision: `GO`
 - `npm run build:assets -- 2026.04.28-rc1`: passed
 - `npm run validate:live -- docs\release-evidence-2026-04-28-live.json`: passed live lifecycle
 - `node scripts/run-blocking-exception-validation.mjs docs\release-evidence-2026-04-28-live.json`: passed
-- `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-28-live.json`: passed
+- `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-29-live.json`: passed with unsigned EXE SHA256 evidence
 - `npm run lint`: passed
 - `npm test`: passed (`17` files / `53` tests)
 - `npm run build`: passed
 
 ## Live Lifecycle Evidence
 
-- Evidence file: `docs/release-evidence-2026-04-28-live.json`
+- Evidence file: `docs/release-evidence-2026-04-29-live.json`
 - Execution mode: `live`
 - Target distro: `AgentSecurity`
 - Shimmed commands: `[]`
@@ -44,7 +44,7 @@ Decision: `GO`
 ## Bundled Assets
 
 - Rootfs: `bridge/assets/agent-security-rootfs.tar`
-- Agent package: `bridge/assets/agent-security-agent.pkg`
+- Agent package: `bridge/assets/openclaw-agent.pkg`
 - Manifest: `bridge/assets/release-assets-manifest.json`
 - Version: `2026.04.28-rc1`
 - Update policy: `bundled-only`
@@ -69,8 +69,9 @@ Decision: `GO`
   - WSL disabled
   - reboot interrupted
   - startup failure
-- The release gate passes with `goNoGo.decision` set to `go`.
+- The release gate includes `releaseArtifacts.windowsInstaller` with SHA256 and `signatureStatus: "Unsigned"`.
 
 ## Required Next Step
 
-Keep the public GitHub release aligned with the default one-click WSL2 deployment wording and the release notes in `docs/release-notes-v1.0.0-wsl2.md`.
+Align the GitHub Release assets with `docs/release-notes-v1.0.0-wsl2.md`: publish `AgentSecurity Setup.exe` and `AgentSecurity Setup.exe.sha256` as the default assets.
+

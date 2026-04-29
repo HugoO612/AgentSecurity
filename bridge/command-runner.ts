@@ -637,13 +637,13 @@ function resolveTemplateContext(input: TemplateCommandInput): ResolvedExecutionC
     distroInstallRoot: input.distroInstallRoot ?? 'C:\\AgentSecurity\\distros',
     rebootResumeMarkerPath:
       input.rebootResumeMarkerPath ?? `${runtimeDir}\\resume-after-reboot.json`,
-    installerDownloadUrl: input.installerDownloadUrl ?? 'bundled://agent-security-agent.pkg',
+    installerDownloadUrl: input.installerDownloadUrl ?? 'bundled://openclaw-agent.pkg',
     installerChecksum: input.installerChecksum ?? 'dev-skip-checksum',
     bundledRootfsChecksum: input.bundledRootfsChecksum ?? 'dev-skip-checksum',
     bundledRootfsPath:
       input.bundledRootfsPath ?? 'C:\\AgentSecurity\\bundled\\agent-security-rootfs.tar',
     bundledAgentArtifactPath:
-      input.bundledAgentArtifactPath ?? 'C:\\AgentSecurity\\bundled\\agent-security-agent.pkg',
+      input.bundledAgentArtifactPath ?? 'C:\\AgentSecurity\\bundled\\openclaw-agent.pkg',
     stagedInstallerPath: `${runtimeDir}\\staged-agent.pkg`,
     stagedRootfsPath: `${runtimeDir}\\staged-rootfs.tar`,
     elevationHelperCommand:

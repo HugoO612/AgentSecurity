@@ -1,14 +1,16 @@
 # Agent Security Release Checklist
 
-Release: v1.0.0-local  
+Release: v1.0.0-wsl2  
 Date: 2026-04-28  
 Owner: Hugo  
-Commit: `88e3cb6`
+Commit: `0ce54c8`
 
 ## Build and Test
 
 - [x] `npm run build:assets -- 2026.04.28-rc1` passes
-  - Result: generated `bridge/assets/agent-security-rootfs.tar`, `bridge/assets/agent-security-agent.pkg`, and `bridge/assets/release-assets-manifest.json`
+  - Result: generated `bridge/assets/agent-security-rootfs.tar`, `bridge/assets/openclaw-agent.pkg`, and `bridge/assets/release-assets-manifest.json`
+- [x] `npm run build:desktop` passes
+  - Result: renderer, bridge, and Electron shell compiled for the Windows desktop package
 - [x] `npm run validate:live -- docs\release-evidence-2026-04-28-live.json` passes live lifecycle
   - Result: install, stop, start, rebuild, and delete succeeded in `live` mode
 - [x] `npm run lint` passes
@@ -19,8 +21,10 @@ Commit: `88e3cb6`
   - Result: passed on 2026-04-28 in current workspace
 - [x] `node scripts/run-blocking-exception-validation.mjs docs\release-evidence-2026-04-28-live.json` passes
   - Result: permission denied, artifact missing, checksum mismatch, and delete failure validated
-- [x] `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-28-live.json` passes
-  - Result: public release gate passed
+- [x] `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-29-live.json` passes with EXE evidence
+  - Result: passed with unsigned `AgentSecurity Setup.exe` SHA256 evidence
+- [x] `npm run package:desktop:release` passes
+  - Result: unsigned `AgentSecurity Setup.exe` and `.sha256` emitted to `release\`
 
 ## Candidate Gate
 
@@ -39,17 +43,17 @@ Commit: `88e3cb6`
 
 ## Current Candidate Status
 
-- [x] bundled rootfs and bundled agent artifact exist
+- [x] bundled rootfs and bundled OpenClaw package exist
   - Rootfs: `bridge/assets/agent-security-rootfs.tar`
-  - Agent: `bridge/assets/agent-security-agent.pkg`
+  - Agent: `bridge/assets/openclaw-agent.pkg`
   - Manifest: `bridge/assets/release-assets-manifest.json`
 - [x] current candidate validated on dedicated `AgentSecurity` distro for core lifecycle
   - Evidence: `docs/release-evidence-2026-04-28-live.json`
   - Delete verification: `wsl.exe -l -q` no longer lists `AgentSecurity`
-- [x] candidate evidence passes public release gate script
+- [x] candidate evidence passes public release gate script with desktop EXE evidence
   - Status: passed
   - Current evidence check:
-    - Command: `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-28-live.json`
+    - Command: `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-29-live.json`
     - Result: passed
 - [x] v1 blocking exceptions validated
   - Status: complete
@@ -68,12 +72,12 @@ Commit: `88e3cb6`
 
 ## Release Decision
 
-Release status for commit `88e3cb6`: `GO`
+Release status for commit `0ce54c8`: `GO`
 
 Public release can proceed because:
 
-- the 4 v1 blocking exceptions are validated on controlled Windows machine states
-- WSL disabled, reboot interrupted, and startup failure have accurate documented recovery guidance
-- the live evidence is updated to `go`
-- the updated live evidence passes `scripts/validate-release-candidate.mjs`
-- README and release notes use the formal v1 public release wording
+- `npm run package:desktop:release` produces `AgentSecurity Setup.exe`
+- `releaseArtifacts.windowsInstaller` is recorded in live evidence with the EXE SHA256 and `signatureStatus: "Unsigned"`
+- `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-29-live.json` passes
+- GitHub Release assets can be replaced with the EXE and `.sha256`
+

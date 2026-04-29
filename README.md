@@ -1,6 +1,6 @@
 # Agent Security v1 One-Click WSL2 Deployment
 
-AgentSecurity v1 defaults to a one-click WSL2 isolated deployment on Windows. The supported public install path creates and manages a dedicated `AgentSecurity` WSL2 runtime instead of installing the agent directly into the Windows host.
+AgentSecurity v1 defaults to a Windows EXE installer that opens into a one-click WSL2 isolated deployment flow for OpenClaw. The supported public install path creates and manages a dedicated `AgentSecurity` WSL2 runtime instead of installing the agent directly into the Windows host.
 
 ## Recommended Path
 
@@ -16,11 +16,13 @@ Users who do not want to own local subsystem setup and local recovery should wai
 
 ## Install For Regular Users
 
-1. Download the one-click installer package from the GitHub Release.
-2. Run the installer on Windows.
-3. Approve the Windows administrator prompt if WSL2 setup requires it.
-4. Wait for AgentSecurity to create the dedicated `AgentSecurity` WSL2 environment from the bundled release files.
-5. Use the app controls to start, stop, rebuild, or delete the dedicated WSL2 environment.
+1. Download `AgentSecurity Setup.exe` from the GitHub Release.
+2. Run the Windows installer. You do not need to extract a zip or install Node.js.
+   - If Windows shows an unknown publisher warning, verify the `.sha256` file from the GitHub Release before installing.
+3. When the app opens for the first time, review the scope and click the one explicit action to install WSL2 and OpenClaw.
+4. Approve the Windows administrator prompt if WSL2 setup requires it.
+5. Wait for AgentSecurity to create the dedicated `AgentSecurity` WSL2 environment and stage the bundled OpenClaw package.
+6. Use the app controls to start, stop, rebuild, or delete the dedicated WSL2 environment.
 
 If Windows says WSL2 is not enabled, enable or install WSL2, reboot if prompted, then run the installer again. If installation is interrupted by reboot, rerun the installer after Windows starts. If the agent does not start, retry start first, then use rebuild or delete and reinstall.
 
@@ -39,15 +41,16 @@ Public v1 scope is fixed:
 - Windows only
 - WSL2 only
 - dedicated `AgentSecurity` distro only
-- bundled rootfs + bundled agent artifact only
+- bundled rootfs + bundled OpenClaw package only
 - no direct install into the Windows host runtime
 - no reuse of a user-managed Ubuntu or other existing distro
 
 Current release status:
-- current workspace is `GO` for v1 public release
+- current desktop release candidate is `GO` with unsigned EXE evidence and matching SHA256
 - bundled candidate assets exist under `bridge/assets/`
-- live lifecycle evidence exists at `docs/release-evidence-2026-04-28-live.json`
+- live lifecycle evidence exists at `docs/release-evidence-2026-04-29-live.json`
 - the 4 v1 blocking exceptions are validated and recorded in `docs/blocking-exception-results-2026-04-28.json`
+- public desktop release evidence includes `AgentSecurity Setup.exe`, its SHA256, and `signatureStatus: "Unsigned"`
 
 ## Technical Boundary
 
@@ -62,9 +65,15 @@ Current release status:
 - `npm run dev`: start app dev server
 - `npm run dev:bridge`: start local bridge
 - `npm run dev:full`: start app + bridge together
+- `npm run dev:desktop`: start the Electron shell against the dev renderer
 - `npm run test`: run tests and term checks
 - `npm run lint`: run lint
 - `npm run build:assets -- <version>`: build bundled rootfs and agent package into `bridge/assets/`
+- `npm run build:desktop`: build renderer, bridge, and Electron desktop shell
+- `npm run package:desktop:dev`: build an unsigned EXE for local packaging validation
+- `npm run package:desktop:release`: build the public EXE and `.sha256`; signs only when signing material is available
+- `npm run package:desktop:signed`: require signing material and build a signed EXE
+- `npm run release:github -- <tag>`: verify the EXE SHA256 and upload it as the default GitHub Release asset
 - `npm run validate:live -- <evidence-path>`: run live WSL2 lifecycle validation and write evidence
 - `npm run build`: build bridge + frontend
 - `node scripts/validate-release-candidate.mjs --evidence <live-evidence.json>`: validate public release evidence
@@ -81,6 +90,7 @@ Current release status:
 - [Exception Matrix Validation](docs/exception-matrix-validation.md)
 - [Release Freeze Record](docs/release-freeze-2026-04-28.md)
 - [Release Notes](docs/release-notes-v1.0.0-wsl2.md)
+- [Desktop Packaging Validation](docs/desktop-packaging-validation-2026-04-29.md)
 - [FAQ](docs/faq.md)
 - [Release Checklist](docs/release-checklist.md)
 - [Go / No-Go Table](docs/go-no-go.md)

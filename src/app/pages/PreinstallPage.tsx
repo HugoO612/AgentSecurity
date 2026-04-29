@@ -75,10 +75,10 @@ export function PreinstallPage() {
             disabled={!canContinue}
             onClick={() => {
               beginPrecheck()
-              navigate('/precheck')
+              navigate('/precheck', { state: { autoStartInstall: true } })
             }}
           >
-            {copy('COPY_BTN_CONTINUE')}
+            {copy('COPY_BTN_START_INSTALL')}
           </button>
         </div>
       </div>

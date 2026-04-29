@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { copy } from '../../copy'
 import { derivePrimaryPageAction } from '../pageActions'
 import { PageScaffold } from '../../components/PageScaffold'
@@ -8,14 +8,36 @@ import { useEnvironment } from '../../domain/machine'
 import { useUiState } from '../../ui/ui-store'
 
 export function PrecheckPage() {
+  const location = useLocation()
   const navigate = useNavigate()
   const { snapshot, checkSummary, state, startInstall } = useEnvironment()
   const { pushNotice } = useUiState()
   const [showFixes, setShowFixes] = useState(checkSummary.blockCount > 0)
+  const autoStartTriggered = useRef(false)
   const primaryAction = derivePrimaryPageAction(
     state,
     checkSummary,
   )
+
+  useEffect(() => {
+    if (!location.state || typeof location.state !== 'object') {
+      return
+    }
+    const shouldAutoStart = 'autoStartInstall' in location.state
+      && location.state.autoStartInstall === true
+
+    if (
+      shouldAutoStart &&
+      !autoStartTriggered.current &&
+      state === 'ready_to_install' &&
+      checkSummary.blockCount === 0 &&
+      checkSummary.warnCount === 0
+    ) {
+      autoStartTriggered.current = true
+      startInstall()
+      navigate('/installing', { replace: true })
+    }
+  }, [checkSummary.blockCount, checkSummary.warnCount, location.state, navigate, startInstall, state])
 
   const handlePrimary = () => {
     if (!primaryAction) {

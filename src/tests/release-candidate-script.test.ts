@@ -24,13 +24,16 @@ describe('release candidate validation script', () => {
     tempDirs.push(dir)
     const assetRoot = join(dir, 'assets')
     const rootfsPath = join(assetRoot, 'agent-security-rootfs.tar')
-    const agentPath = join(assetRoot, 'agent-security-agent.pkg')
+    const agentPath = join(assetRoot, 'openclaw-agent.pkg')
+    const installerPath = join(dir, 'AgentSecurity Setup.exe')
     const evidencePath = join(dir, 'valid-evidence.json')
     const rootfsContent = 'rootfs'
     const agentContent = 'agent'
+    const installerContent = 'signed installer placeholder'
     await mkdir(assetRoot)
     await writeFile(rootfsPath, rootfsContent, 'utf8')
     await writeFile(agentPath, agentContent, 'utf8')
+    await writeFile(installerPath, installerContent, 'utf8')
 
     await writeFile(
       evidencePath,
@@ -53,6 +56,16 @@ describe('release candidate validation script', () => {
             version: '2026.04.28-rc1',
             source: 'release-pipeline',
             updatePolicy: 'bundled-only',
+          },
+          releaseArtifacts: {
+            windowsInstaller: {
+              path: installerPath,
+              sha256: createHash('sha256').update(installerContent).digest('hex'),
+              signatureStatus: 'Unsigned',
+              signaturePolicy: 'unsigned-accepted',
+              userVisibleInstallNote: 'Windows may show an unknown publisher warning. Verify SHA256 before installing.',
+            },
+            windowsInstallerSha256File: `${installerPath}.sha256`,
           },
           exceptionMatrix: {
             blocking: {
@@ -189,14 +202,15 @@ describe('release candidate validation script', () => {
         {
           version: '2026.04.28-rc1',
           sourceCommit: 'abc123',
+          agentName: 'OpenClaw',
           updatePolicy: 'bundled-only',
           artifacts: {
             rootfs: {
               path: 'bridge/assets/agent-security-rootfs.tar',
               sha256: createHash('sha256').update(rootfsContent).digest('hex'),
             },
-            agent: {
-              path: 'bridge/assets/agent-security-agent.pkg',
+            agentPackage: {
+              path: 'bridge/assets/openclaw-agent.pkg',
               sha256: createHash('sha256').update(agentContent).digest('hex'),
             },
           },
@@ -212,7 +226,11 @@ describe('release candidate validation script', () => {
       ['scripts/validate-release-candidate.mjs', '--evidence', evidencePath],
       {
         cwd: 'A:\\AgentSecurity',
-        env: { ...process.env, AGENT_SECURITY_RELEASE_ASSET_ROOT: assetRoot },
+        env: {
+          ...process.env,
+          AGENT_SECURITY_RELEASE_ASSET_ROOT: assetRoot,
+          AGENT_SECURITY_SKIP_SIGNATURE_VERIFICATION: '1',
+        },
       },
     )
 

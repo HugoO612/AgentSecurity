@@ -33,6 +33,7 @@ export type BridgeConfig = {
   bundledRootfsChecksum: string
   bundledRootfsPath: string
   bundledAgentArtifactPath: string
+  bundledAgentName: string
 }
 
 export function createBridgeConfig(): BridgeConfig {
@@ -77,7 +78,7 @@ export function createBridgeConfig(): BridgeConfig {
     join(bridgeRoot, 'assets', 'agent-security-rootfs.tar')
   const bundledAgentArtifactPath =
     process.env.AGENT_SECURITY_BUNDLED_AGENT_PATH?.trim() ||
-    join(bridgeRoot, 'assets', 'agent-security-agent.pkg')
+    join(bridgeRoot, 'assets', 'openclaw-agent.pkg')
   const allowDevShim = process.env.AGENT_SECURITY_ALLOW_DEV_SHIM === '1'
   const configuredTargetDistro =
     process.env.AGENT_SECURITY_TARGET_DISTRO?.trim() || 'AgentSecurity'
@@ -85,12 +86,14 @@ export function createBridgeConfig(): BridgeConfig {
     process.env.AGENT_SECURITY_DISTRO_SEED?.trim() || 'AgentSecurityBase'
   const installerDownloadUrl =
     process.env.AGENT_SECURITY_AGENT_INSTALL_URL?.trim() ||
-    'bundled://agent-security-agent.pkg'
+    'bundled://openclaw-agent.pkg'
   const installerChecksum =
     process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256?.trim() ||
     'dev-skip-checksum'
   const bundledRootfsChecksum =
     process.env.AGENT_SECURITY_ROOTFS_SHA256?.trim() || 'dev-skip-checksum'
+  const bundledAgentName =
+    process.env.AGENT_SECURITY_AGENT_NAME?.trim() || 'OpenClaw'
 
   if (mode !== 'dev') {
     if (allowDevShim) {
@@ -102,7 +105,7 @@ export function createBridgeConfig(): BridgeConfig {
     if (configuredDistroSeed !== 'AgentSecurityBase') {
       throw new Error('Release modes only support the bundled AgentSecurityBase seed.')
     }
-    if (installerDownloadUrl !== 'bundled://agent-security-agent.pkg') {
+    if (installerDownloadUrl !== 'bundled://openclaw-agent.pkg') {
       throw new Error('Release modes only support bundled installer assets.')
     }
     if (!existsSync(bundledRootfsPath)) {
@@ -152,6 +155,7 @@ export function createBridgeConfig(): BridgeConfig {
     bundledRootfsChecksum,
     bundledRootfsPath,
     bundledAgentArtifactPath,
+    bundledAgentName,
   }
 }
 
