@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 
 export type AllowedProgram = 'powershell.exe' | 'wsl.exe'
 
@@ -17,6 +17,25 @@ type CommandExecutor = (
 
 let commandExecutor: CommandExecutor = runAllowedCommand
 
+function killProcessTree(pid: number) {
+  if (process.platform === 'win32') {
+    execFile('taskkill.exe', ['/PID', String(pid), '/T', '/F'], {
+      windowsHide: true,
+    }, () => {})
+    return
+  }
+
+  try {
+    process.kill(-pid, 'SIGKILL')
+  } catch {
+    try {
+      process.kill(pid, 'SIGKILL')
+    } catch {
+      // Process already exited.
+    }
+  }
+}
+
 export async function runAllowedCommand(
   program: AllowedProgram,
   args: string[],
@@ -32,14 +51,20 @@ export async function runAllowedCommand(
       shell: false,
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
+      detached: process.platform !== 'win32',
     })
 
     let stdout = ''
     let stderr = ''
+    let timedOut = false
     const timeout = setTimeout(() => {
+      timedOut = true
       onTimeout?.()
-      child.kill()
-      reject(new Error(`Command timed out: ${program}`))
+      if (child.pid) {
+        killProcessTree(child.pid)
+      } else {
+        child.kill()
+      }
     }, timeoutMs)
 
     child.stdout.on('data', (chunk) => {
@@ -54,6 +79,10 @@ export async function runAllowedCommand(
     })
     child.on('close', (exitCode) => {
       clearTimeout(timeout)
+      if (timedOut) {
+        reject(new Error(`Command timed out: ${program}`))
+        return
+      }
       resolve({
         exitCode: exitCode ?? 1,
         stdout: stdout.trim(),

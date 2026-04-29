@@ -1,8 +1,8 @@
 {
-  "version": "2026.04.29-openclaw",
-  "generatedAt": "2026-04-29T11:24:34.081Z",
-  "source": "dev-busybox-placeholder",
-  "sourceCommit": "f346836",
+  "version": "2026.04.29-openclaw-ubuntu2404",
+  "generatedAt": "2026-04-29T14:04:35.409Z",
+  "source": "ubuntu-24.04-lts-provided-rootfs",
+  "sourceCommit": "b16e894",
   "agentName": "OpenClaw",
   "ubuntuVersion": "24.04-lts",
   "nodeVersion": "24",
@@ -13,15 +13,23 @@
   "artifacts": {
     "rootfs": {
       "path": "bridge/assets/agent-security-rootfs.tar",
-      "sha256": "0c54fe3e956148686bca30b04480d33a81e7552a4864c3a7d5d9796ea2b29503"
+      "sha256": "2a790896740b14d637dbdc583cce1ba081ac53b9e9cdb46dc09a2f73abbd9934"
     },
     "agentPackage": {
       "path": "bridge/assets/openclaw-agent.pkg",
-      "sha256": "1e3230833e5431e8e37b60dd2db3a4d0ab852a86e83e190982e16c8c38ec4592"
+      "sha256": "781c03bd60f241f27981efe762571b069d6c347be424def136b79f68c2ff4b5e"
     },
     "bootstrap": {
       "path": "bridge/assets/openclaw-bootstrap.sh",
-      "sha256": "74d254c9a5078c46fe78d7a00a32bc31695fa077582e9000b5cf01b04c8d6e14"
+      "sha256": "4699adabc3eb91a5e9d95534e512c4504e9fd633efa04df34674484973865a06"
+    },
+    "nodeRuntime": {
+      "path": "bridge/assets/node-v24.15.0-linux-x64.tar.xz",
+      "sha256": "472655581fb851559730c48763e0c9d3bc25975c59d518003fc0849d3e4ba0f6"
+    },
+    "openClawNpmTarball": {
+      "path": "bridge/assets/openclaw-2026.4.26.tgz",
+      "sha256": "a1c0b9d417003b302d6c63bfc93d015784ad4b6a4a1360d1814ee1f5928ce3b4"
     }
   }
 }

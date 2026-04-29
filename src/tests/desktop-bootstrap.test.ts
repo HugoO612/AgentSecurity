@@ -57,6 +57,14 @@ describe('desktop bootstrap helpers', () => {
               path: 'bridge/assets/openclaw-bootstrap.sh',
               sha256: 'c'.repeat(64),
             },
+            nodeRuntime: {
+              path: 'bridge/assets/node-v24.15.0-linux-x64.tar.xz',
+              sha256: 'd'.repeat(64),
+            },
+            openClawNpmTarball: {
+              path: 'bridge/assets/openclaw-2026.4.26.tgz',
+              sha256: 'e'.repeat(64),
+            },
           },
         }),
         'utf8',
@@ -72,6 +80,8 @@ describe('desktop bootstrap helpers', () => {
           rootfsPath: 'C:\\assets\\agent-security-rootfs.tar',
           agentPackagePath: 'C:\\assets\\openclaw-agent.pkg',
           bootstrapPath: 'C:\\assets\\openclaw-bootstrap.sh',
+          nodeTarballPath: 'C:\\assets\\node-v24.15.0-linux-x64.tar.xz',
+          openClawTarballPath: 'C:\\assets\\openclaw-2026.4.26.tgz',
         },
         assets,
       })
@@ -80,6 +90,10 @@ describe('desktop bootstrap helpers', () => {
       expect(env.AGENT_SECURITY_AGENT_NAME).toBe('OpenClaw')
       expect(env.AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH).toBe('C:\\assets\\openclaw-bootstrap.sh')
       expect(env.AGENT_SECURITY_BOOTSTRAP_SHA256).toBe('c'.repeat(64))
+      expect(env.AGENT_SECURITY_BUNDLED_NODE_TARBALL_PATH).toBe('C:\\assets\\node-v24.15.0-linux-x64.tar.xz')
+      expect(env.AGENT_SECURITY_NODE_TARBALL_SHA256).toBe('d'.repeat(64))
+      expect(env.AGENT_SECURITY_BUNDLED_OPENCLAW_TARBALL_PATH).toBe('C:\\assets\\openclaw-2026.4.26.tgz')
+      expect(env.AGENT_SECURITY_OPENCLAW_TARBALL_SHA256).toBe('e'.repeat(64))
       expect(env.AGENT_SECURITY_UBUNTU_VERSION).toBe('24.04-lts')
       expect(env.AGENT_SECURITY_NODE_VERSION).toBe('24')
       expect(env.AGENT_SECURITY_ALLOWED_ORIGINS).toBe('null')

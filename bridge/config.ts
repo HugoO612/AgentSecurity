@@ -41,6 +41,10 @@ export type BridgeConfig = {
   openClawPackageName: string
   bundledBootstrapPath: string
   bundledBootstrapChecksum: string
+  bundledNodeTarballPath: string
+  bundledNodeTarballChecksum: string
+  bundledOpenClawTarballPath: string
+  bundledOpenClawTarballChecksum: string
 }
 
 export function createBridgeConfig(): BridgeConfig {
@@ -112,6 +116,16 @@ export function createBridgeConfig(): BridgeConfig {
     join(bridgeRoot, 'assets', 'openclaw-bootstrap.sh')
   const bundledBootstrapChecksum =
     process.env.AGENT_SECURITY_BOOTSTRAP_SHA256?.trim() || 'dev-skip-checksum'
+  const bundledNodeTarballPath =
+    process.env.AGENT_SECURITY_BUNDLED_NODE_TARBALL_PATH?.trim() ||
+    join(bridgeRoot, 'assets', 'node-v24.15.0-linux-x64.tar.xz')
+  const bundledNodeTarballChecksum =
+    process.env.AGENT_SECURITY_NODE_TARBALL_SHA256?.trim() || 'dev-skip-checksum'
+  const bundledOpenClawTarballPath =
+    process.env.AGENT_SECURITY_BUNDLED_OPENCLAW_TARBALL_PATH?.trim() ||
+    join(bridgeRoot, 'assets', 'openclaw-2026.4.26.tgz')
+  const bundledOpenClawTarballChecksum =
+    process.env.AGENT_SECURITY_OPENCLAW_TARBALL_SHA256?.trim() || 'dev-skip-checksum'
 
   if (mode !== 'dev') {
     if (allowDevShim) {
@@ -135,6 +149,12 @@ export function createBridgeConfig(): BridgeConfig {
     if (!existsSync(bundledBootstrapPath)) {
       throw new Error('Bundled OpenClaw bootstrap artifact is required outside dev mode.')
     }
+    if (!existsSync(bundledNodeTarballPath)) {
+      throw new Error('Bundled Node runtime tarball is required outside dev mode.')
+    }
+    if (!existsSync(bundledOpenClawTarballPath)) {
+      throw new Error('Bundled OpenClaw npm tarball is required outside dev mode.')
+    }
     if (!isSha256(installerChecksum)) {
       throw new Error('A real bundled agent artifact SHA256 is required outside dev mode.')
     }
@@ -143,6 +163,12 @@ export function createBridgeConfig(): BridgeConfig {
     }
     if (!isSha256(bundledBootstrapChecksum)) {
       throw new Error('A real bundled OpenClaw bootstrap SHA256 is required outside dev mode.')
+    }
+    if (!isSha256(bundledNodeTarballChecksum)) {
+      throw new Error('A real bundled Node runtime SHA256 is required outside dev mode.')
+    }
+    if (!isSha256(bundledOpenClawTarballChecksum)) {
+      throw new Error('A real bundled OpenClaw npm tarball SHA256 is required outside dev mode.')
     }
     if (ubuntuVersion !== '24.04-lts') {
       throw new Error('Release modes only support Ubuntu 24.04 LTS rootfs.')
@@ -193,6 +219,10 @@ export function createBridgeConfig(): BridgeConfig {
     openClawPackageName,
     bundledBootstrapPath,
     bundledBootstrapChecksum,
+    bundledNodeTarballPath,
+    bundledNodeTarballChecksum,
+    bundledOpenClawTarballPath,
+    bundledOpenClawTarballChecksum,
   }
 }
 

@@ -14,6 +14,10 @@ const assetDir = resolve('bridge/assets')
 const rootfsPath = resolve(assetDir, 'agent-security-rootfs.tar')
 const agentPath = resolve(assetDir, 'openclaw-agent.pkg')
 const bootstrapPath = resolve(assetDir, 'openclaw-bootstrap.sh')
+const nodeTarballName = 'node-v24.15.0-linux-x64.tar.xz'
+const nodeTarballPath = resolve(assetDir, nodeTarballName)
+const openClawTarballName = 'openclaw-2026.4.26.tgz'
+const openClawTarballPath = resolve(assetDir, openClawTarballName)
 const manifestPath = resolve(assetDir, 'release-assets-manifest.json')
 const ubuntuRootfsUrl =
   process.env.AGENT_SECURITY_UBUNTU_ROOTFS_URL?.trim() ||
@@ -175,10 +179,18 @@ if (bundledOpenClawPath) {
 
 const rootfsSource = await resolveUbuntuRootfsSource()
 
-const [rootfsSha256, agentSha256, bootstrapSha256] = await Promise.all([
+const [
+  rootfsSha256,
+  agentSha256,
+  bootstrapSha256,
+  nodeTarballSha256,
+  openClawTarballSha256,
+] = await Promise.all([
   sha256(rootfsPath),
   sha256(agentPath),
   sha256(bootstrapPath),
+  sha256(nodeTarballPath),
+  sha256(openClawTarballPath),
 ])
 
 const manifest = {
@@ -205,6 +217,14 @@ const manifest = {
     bootstrap: {
       path: 'bridge/assets/openclaw-bootstrap.sh',
       sha256: bootstrapSha256,
+    },
+    nodeRuntime: {
+      path: `bridge/assets/${nodeTarballName}`,
+      sha256: nodeTarballSha256,
+    },
+    openClawNpmTarball: {
+      path: `bridge/assets/${openClawTarballName}`,
+      sha256: openClawTarballSha256,
     },
   },
 }

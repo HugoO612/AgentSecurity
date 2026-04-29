@@ -1,0 +1,235 @@
+{
+  "candidateVersion": "2026.04.29-openclaw-ubuntu2404",
+  "commit": "b16e894",
+  "runAt": "2026-04-29T14:20:32.056Z",
+  "machine": "ī��",
+  "mode": "release-candidate-validation",
+  "executionMode": "live",
+  "targetDistro": "AgentSecurity",
+  "bundledArtifacts": {
+    "rootfs": "bridge/assets/agent-security-rootfs.tar",
+    "agent": "bridge/assets/openclaw-agent.pkg",
+    "bootstrap": "bridge/assets/openclaw-bootstrap.sh",
+    "nodeRuntime": "bridge/assets/node-v24.15.0-linux-x64.tar.xz",
+    "openClawNpmTarball": "bridge/assets/openclaw-2026.4.26.tgz",
+    "checksums": {
+      "rootfsSha256": "2a790896740b14d637dbdc583cce1ba081ac53b9e9cdb46dc09a2f73abbd9934",
+      "agentSha256": "781c03bd60f241f27981efe762571b069d6c347be424def136b79f68c2ff4b5e",
+      "bootstrapSha256": "4699adabc3eb91a5e9d95534e512c4504e9fd633efa04df34674484973865a06",
+      "nodeTarballSha256": "472655581fb851559730c48763e0c9d3bc25975c59d518003fc0849d3e4ba0f6",
+      "openClawTarballSha256": "a1c0b9d417003b302d6c63bfc93d015784ad4b6a4a1360d1814ee1f5928ce3b4"
+    },
+    "version": "2026.04.29-openclaw-ubuntu2404",
+    "source": "ubuntu-24.04-lts-provided-rootfs",
+    "updatePolicy": "mostly-bundled",
+    "ubuntuVersion": "24.04-lts",
+    "nodeVersion": "24",
+    "openClawInstallSource": "npm",
+    "openClawVersionPolicy": "latest"
+  },
+  "releaseArtifacts": {
+    "windowsInstaller": {
+      "path": "release/AgentSecurity Setup.exe",
+      "sha256": "8676777b5a21c5d11a57f2245897e861f0e1b347f1b3dc3e5dd5866c76a81843",
+      "signatureStatus": "Unsigned",
+      "signaturePolicy": "unsigned-accepted",
+      "userVisibleInstallNote": "Windows may show an unknown publisher warning. Verify the SHA256 file from the GitHub Release before installing."
+    },
+    "windowsInstallerSha256File": "release/AgentSecurity Setup.exe.sha256"
+  },
+  "exceptionMatrix": {
+    "blocking": {
+      "permission_denied": {
+        "required": true,
+        "status": "validated"
+      },
+      "artifact_missing": {
+        "required": true,
+        "status": "validated"
+      },
+      "checksum_mismatch": {
+        "required": true,
+        "status": "validated"
+      },
+      "delete_failure": {
+        "required": true,
+        "status": "validated"
+      }
+    },
+    "documentedLimitations": {
+      "wsl_disabled": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "docs/exception-matrix-validation.md#wsl_disabled",
+        "recoverySummary": "Prompt the user to enable WSL2, then rerun precheck and install."
+      },
+      "reboot_interrupted": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "docs/exception-matrix-validation.md#reboot_interrupted",
+        "recoverySummary": "Reopen the installer after reboot and follow the guided resume or reinstall path."
+      },
+      "startup_failure": {
+        "required": false,
+        "status": "documented",
+        "documentationReference": "docs/exception-matrix-validation.md#startup_failure",
+        "recoverySummary": "Use retry, rebuild, or delete and reinstall based on the recovery guidance."
+      }
+    }
+  },
+  "shimmedCommands": [],
+  "lifecycle": [
+    {
+      "action": "install",
+      "beforeState": "ready-to-install",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "running",
+      "recoveryAction": null,
+      "evidence": "fa087aa9-aaf8-48b7-a531-4e9d4c1b4bee"
+    },
+    {
+      "action": "stop_agent",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "finalizing",
+      "afterState": "stopped",
+      "recoveryAction": null,
+      "evidence": "585c87d5-2594-4355-9ba0-f116393980ef"
+    },
+    {
+      "action": "start_agent",
+      "beforeState": "stopped",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "finalizing",
+      "afterState": "running",
+      "recoveryAction": null,
+      "evidence": "72156148-0ef7-4626-bf28-d7be789c8a75"
+    },
+    {
+      "action": "rebuild_environment",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "running",
+      "recoveryAction": null,
+      "evidence": "8daa382f-5f07-482b-b631-7065d75e87b6"
+    },
+    {
+      "action": "delete_environment",
+      "beforeState": "running",
+      "receiptStatus": 202,
+      "finalStatus": "succeeded",
+      "finalStage": "completed",
+      "afterState": "not-installed",
+      "recoveryAction": null,
+      "evidence": "8fef965f-ba6f-4b16-8ea1-c4db61509dee"
+    }
+  ],
+  "exceptionValidation": [
+    {
+      "case": "permission_denied",
+      "triggerMethod": "Started the production bridge with a controlled elevation helper that exits 1223, matching Windows UAC user-cancel behavior, then ran request_permission.",
+      "errorCode": "permission_denied",
+      "userVisibleMessage": "Command failed at stage enabling_features.",
+      "recommendedRecovery": "Ask the user to rerun the permission step and approve the Windows administrator prompt.",
+      "actualRecoveryResult": "Operation failed quickly, final status stayed failed, and installation state remained unchanged.",
+      "evidence": "6973cd7a-fe58-413c-b58e-49f6775529d4",
+      "rawEvidencePath": "docs/blocking-exception-results-2026-04-28.json#permission_denied"
+    },
+    {
+      "case": "wsl_disabled",
+      "triggerMethod": "NOT_VALIDATED",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "Not validated in this live lifecycle run.",
+      "recommendedRecovery": "Run the dedicated exception validation case on a controlled Windows machine.",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "docs/exception-matrix-validation.md#wsl_disabled"
+    },
+    {
+      "case": "reboot_interrupted",
+      "triggerMethod": "NOT_VALIDATED",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "Not validated in this live lifecycle run.",
+      "recommendedRecovery": "Run the dedicated exception validation case on a controlled Windows machine.",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "docs/exception-matrix-validation.md#reboot_interrupted"
+    },
+    {
+      "case": "artifact_missing",
+      "triggerMethod": "Started the production bridge with AGENT_SECURITY_BUNDLED_AGENT_PATH pointing to a missing release asset.",
+      "errorCode": "bundled_agent_artifact_missing",
+      "userVisibleMessage": "Bundled agent artifact is required outside dev mode.",
+      "recommendedRecovery": "Restore the exact bundled release package and rerun the installer.",
+      "actualRecoveryResult": "Bridge failed before install work began; restoring the bundled artifact let health check pass.",
+      "evidence": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-29T14-25-39-641Z\\artifact-missing\\bridge-startup-failure.txt",
+      "rawEvidencePath": "docs/blocking-exception-results-2026-04-28.json#artifact_missing"
+    },
+    {
+      "case": "checksum_mismatch",
+      "triggerMethod": "Started the production bridge with a modified bundled agent package while keeping the frozen manifest SHA256.",
+      "errorCode": "artifact_invalid",
+      "userVisibleMessage": "Command failed at stage verifying_bootstrap.",
+      "recommendedRecovery": "Replace the corrupted package with the exact release asset and rerun install.",
+      "actualRecoveryResult": "Installer stopped at checksum verification and did not continue to agent install.",
+      "evidence": "9ba5a0cf-90cc-4ceb-a6be-b7cbdfdce24d",
+      "rawEvidencePath": "docs/blocking-exception-results-2026-04-28.json#checksum_mismatch"
+    },
+    {
+      "case": "startup_failure",
+      "triggerMethod": "NOT_VALIDATED",
+      "errorCode": "DOCUMENTED_LIMITATION",
+      "userVisibleMessage": "Not validated in this live lifecycle run.",
+      "recommendedRecovery": "Run the dedicated exception validation case on a controlled Windows machine.",
+      "actualRecoveryResult": "documented only",
+      "evidence": "documentation-only",
+      "documentationReference": "docs/exception-matrix-validation.md#startup_failure"
+    },
+    {
+      "case": "delete_failure",
+      "triggerMethod": "Installed the dedicated AgentSecurity distro, created a protected Windows-side residue under its install directory, then ran delete_environment.",
+      "errorCode": "delete_verification_failed",
+      "userVisibleMessage": "Command failed at stage deleting.",
+      "recommendedRecovery": "Report the remaining path to the user, remove the blocked residue after permission is fixed, then verify the distro is gone.",
+      "actualRecoveryResult": "Delete did not report success while residue remained; removing the protected residue cleared the remaining install directory.",
+      "evidence": "2add46d8-7417-40f9-9080-f42319eb8eff",
+      "rawEvidencePath": "docs/blocking-exception-results-2026-04-28.json#delete_failure"
+    }
+  ],
+  "residualItems": {
+    "remainingWindowsPaths": [
+      "[CONTROLLED_DATA_DIR]",
+      "[CONTROLLED_DATA_DIR]\\diagnostics",
+      "[CONTROLLED_DATA_DIR]\\reports"
+    ],
+    "removedWindowsPaths": [
+      "Dedicated distro placeholder for AgentSecurity",
+      "Runtime configuration",
+      "Bridge runtime state"
+    ],
+    "distroPresentAfterDelete": false,
+    "logsRetainedForSupport": [
+      "[CONTROLLED_DATA_DIR]",
+      "[CONTROLLED_DATA_DIR]\\diagnostics",
+      "[CONTROLLED_DATA_DIR]\\reports"
+    ],
+    "unexpectedResidue": []
+  },
+  "supportBundleChecks": {
+    "containsBridgeToken": false,
+    "containsLocalAppDataPath": false,
+    "containsAuthorizationHeader": false,
+    "containsRedactedMarkers": true
+  },
+  "goNoGo": {
+    "decision": "go",
+    "blockingReasons": [],
+    "followUpOwner": "release-lead"
+  }
+}

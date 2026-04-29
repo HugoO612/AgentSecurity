@@ -47,6 +47,8 @@ async function startDesktopApp() {
     rootfsPath: desktopPaths.rootfsPath,
     agentPackagePath: desktopPaths.agentPackagePath,
     bootstrapPath: desktopPaths.bootstrapPath,
+    nodeTarballPath: desktopPaths.nodeTarballPath,
+    openClawTarballPath: desktopPaths.openClawTarballPath,
     assets,
     mode,
   })
@@ -168,6 +170,8 @@ function spawnBridgeProcess(input: {
   rootfsPath: string
   agentPackagePath: string
   bootstrapPath: string
+  nodeTarballPath: string
+  openClawTarballPath: string
   assets: Awaited<ReturnType<typeof readBridgeAssetContext>>
   mode: 'dev' | 'production'
 }) {
@@ -180,6 +184,8 @@ function spawnBridgeProcess(input: {
       rootfsPath: input.rootfsPath,
       agentPackagePath: input.agentPackagePath,
       bootstrapPath: input.bootstrapPath,
+      nodeTarballPath: input.nodeTarballPath,
+      openClawTarballPath: input.openClawTarballPath,
     },
     assets: input.assets,
     baseEnv: process.env,

@@ -6,8 +6,8 @@
     "userVisibleMessage": "Command failed at stage enabling_features.",
     "recommendedRecovery": "Ask the user to rerun the permission step and approve the Windows administrator prompt.",
     "actualRecoveryResult": "Operation failed quickly, final status stayed failed, and installation state remained unchanged.",
-    "evidence": "4a9735b2-d12d-4485-aa38-cd9d80cbb392",
-    "rawEvidencePath": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-28T12-20-54-345Z\\permission-denied"
+    "evidence": "6973cd7a-fe58-413c-b58e-49f6775529d4",
+    "rawEvidencePath": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-29T14-25-39-641Z\\permission-denied"
   },
   {
     "case": "artifact_missing",
@@ -16,18 +16,18 @@
     "userVisibleMessage": "Bundled agent artifact is required outside dev mode.",
     "recommendedRecovery": "Restore the exact bundled release package and rerun the installer.",
     "actualRecoveryResult": "Bridge failed before install work began; restoring the bundled artifact let health check pass.",
-    "evidence": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-28T12-20-54-345Z\\artifact-missing\\bridge-startup-failure.txt",
-    "rawEvidencePath": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-28T12-20-54-345Z\\artifact-missing"
+    "evidence": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-29T14-25-39-641Z\\artifact-missing\\bridge-startup-failure.txt",
+    "rawEvidencePath": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-29T14-25-39-641Z\\artifact-missing"
   },
   {
     "case": "checksum_mismatch",
     "triggerMethod": "Started the production bridge with a modified bundled agent package while keeping the frozen manifest SHA256.",
     "errorCode": "artifact_invalid",
-    "userVisibleMessage": "Command failed at stage verify_checksum.",
+    "userVisibleMessage": "Command failed at stage verifying_bootstrap.",
     "recommendedRecovery": "Replace the corrupted package with the exact release asset and rerun install.",
     "actualRecoveryResult": "Installer stopped at checksum verification and did not continue to agent install.",
-    "evidence": "9b27e5d0-d3b2-4445-a090-3fdf2799b56d",
-    "rawEvidencePath": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-28T12-20-54-345Z\\checksum-mismatch"
+    "evidence": "9ba5a0cf-90cc-4ceb-a6be-b7cbdfdce24d",
+    "rawEvidencePath": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-29T14-25-39-641Z\\checksum-mismatch"
   },
   {
     "case": "delete_failure",
@@ -36,7 +36,7 @@
     "userVisibleMessage": "Command failed at stage deleting.",
     "recommendedRecovery": "Report the remaining path to the user, remove the blocked residue after permission is fixed, then verify the distro is gone.",
     "actualRecoveryResult": "Delete did not report success while residue remained; removing the protected residue cleared the remaining install directory.",
-    "evidence": "716e3a9c-d857-47d1-99bd-26c484bf5db8",
-    "rawEvidencePath": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-28T12-20-54-345Z\\delete-failure"
+    "evidence": "2add46d8-7417-40f9-9080-f42319eb8eff",
+    "rawEvidencePath": "A:\\AgentSecurity\\.tmp\\blocking-exception-validation\\2026-04-29T14-25-39-641Z\\delete-failure"
   }
 ]

@@ -12,6 +12,8 @@ const committedResultPath = 'docs/blocking-exception-results-2026-04-28.json'
 const goodRootfs = resolve('bridge/assets/agent-security-rootfs.tar')
 const goodAgent = resolve('bridge/assets/openclaw-agent.pkg')
 const goodBootstrap = resolve('bridge/assets/openclaw-bootstrap.sh')
+const goodNodeTarball = resolve('bridge/assets/node-v24.15.0-linux-x64.tar.xz')
+const goodOpenClawTarball = resolve('bridge/assets/openclaw-2026.4.26.tgz')
 let nextPort = Number(process.env.AGENT_SECURITY_EXCEPTION_PORT ?? 4590)
 
 await mkdir(runRoot, { recursive: true })
@@ -250,6 +252,8 @@ function buildBridgeEnv(context, extraEnv) {
     AGENT_SECURITY_AGENT_INSTALL_SHA256:
       manifest.artifacts.agentPackage?.sha256 ?? manifest.artifacts.agent.sha256,
     AGENT_SECURITY_BOOTSTRAP_SHA256: manifest.artifacts.bootstrap.sha256,
+    AGENT_SECURITY_NODE_TARBALL_SHA256: manifest.artifacts.nodeRuntime.sha256,
+    AGENT_SECURITY_OPENCLAW_TARBALL_SHA256: manifest.artifacts.openClawNpmTarball.sha256,
     AGENT_SECURITY_AGENT_INSTALL_URL: 'bundled://openclaw-agent.pkg',
     AGENT_SECURITY_AGENT_NAME: manifest.agentName ?? 'OpenClaw',
     AGENT_SECURITY_UBUNTU_VERSION: manifest.ubuntuVersion ?? '24.04-lts',
@@ -262,6 +266,10 @@ function buildBridgeEnv(context, extraEnv) {
       extraEnv.AGENT_SECURITY_BUNDLED_AGENT_PATH ?? goodAgent,
     AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH:
       extraEnv.AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH ?? goodBootstrap,
+    AGENT_SECURITY_BUNDLED_NODE_TARBALL_PATH:
+      extraEnv.AGENT_SECURITY_BUNDLED_NODE_TARBALL_PATH ?? goodNodeTarball,
+    AGENT_SECURITY_BUNDLED_OPENCLAW_TARBALL_PATH:
+      extraEnv.AGENT_SECURITY_BUNDLED_OPENCLAW_TARBALL_PATH ?? goodOpenClawTarball,
   }
 }
 
@@ -341,7 +349,7 @@ async function deleteWithBridge(bridge) {
 }
 
 async function pollOperation(bridge, path) {
-  for (let index = 0; index < 160; index += 1) {
+  for (let index = 0; index < 900; index += 1) {
     const operation = await requestJson(bridge, path)
     if (operation.status === 'succeeded' || operation.status === 'failed') {
       return operation

@@ -30,6 +30,14 @@ type ReleaseAssetManifest = {
       path: string
       sha256: string
     }
+    nodeRuntime?: {
+      path: string
+      sha256: string
+    }
+    openClawNpmTarball?: {
+      path: string
+      sha256: string
+    }
   }
 }
 
@@ -42,6 +50,8 @@ export type DesktopPaths = {
   rootfsPath: string
   agentPackagePath: string
   bootstrapPath: string
+  nodeTarballPath: string
+  openClawTarballPath: string
 }
 
 export type BridgeAssetContext = {
@@ -50,6 +60,8 @@ export type BridgeAssetContext = {
   agentChecksum: string
   rootfsChecksum: string
   bootstrapChecksum: string
+  nodeTarballChecksum: string
+  openClawTarballChecksum: string
   ubuntuVersion: string
   nodeVersion: string
 }
@@ -69,6 +81,8 @@ export function resolveDesktopPaths(input: {
         rootfsPath: join(input.resourcesPath, 'bridge-assets', 'agent-security-rootfs.tar'),
         agentPackagePath: join(input.resourcesPath, 'bridge-assets', 'openclaw-agent.pkg'),
         bootstrapPath: join(input.resourcesPath, 'bridge-assets', 'openclaw-bootstrap.sh'),
+        nodeTarballPath: join(input.resourcesPath, 'bridge-assets', 'node-v24.15.0-linux-x64.tar.xz'),
+        openClawTarballPath: join(input.resourcesPath, 'bridge-assets', 'openclaw-2026.4.26.tgz'),
       }
     : {
         rendererUrl: input.rendererDevUrl ?? 'http://127.0.0.1:5173',
@@ -78,6 +92,8 @@ export function resolveDesktopPaths(input: {
         rootfsPath: resolve(input.appRoot, 'bridge', 'assets', 'agent-security-rootfs.tar'),
         agentPackagePath: resolve(input.appRoot, 'bridge', 'assets', 'openclaw-agent.pkg'),
         bootstrapPath: resolve(input.appRoot, 'bridge', 'assets', 'openclaw-bootstrap.sh'),
+        nodeTarballPath: resolve(input.appRoot, 'bridge', 'assets', 'node-v24.15.0-linux-x64.tar.xz'),
+        openClawTarballPath: resolve(input.appRoot, 'bridge', 'assets', 'openclaw-2026.4.26.tgz'),
       }
 }
 
@@ -98,6 +114,12 @@ export async function readBridgeAssetContext(
   if (!manifest.artifacts?.bootstrap?.sha256) {
     throw new Error('Release asset manifest is missing OpenClaw bootstrap SHA256.')
   }
+  if (!manifest.artifacts?.nodeRuntime?.sha256) {
+    throw new Error('Release asset manifest is missing Node runtime SHA256.')
+  }
+  if (!manifest.artifacts?.openClawNpmTarball?.sha256) {
+    throw new Error('Release asset manifest is missing OpenClaw npm tarball SHA256.')
+  }
 
   return {
     manifest,
@@ -105,6 +127,8 @@ export async function readBridgeAssetContext(
     agentChecksum: agentArtifact.sha256,
     rootfsChecksum: manifest.artifacts.rootfs.sha256,
     bootstrapChecksum: manifest.artifacts.bootstrap.sha256,
+    nodeTarballChecksum: manifest.artifacts.nodeRuntime.sha256,
+    openClawTarballChecksum: manifest.artifacts.openClawNpmTarball.sha256,
     ubuntuVersion: manifest.ubuntuVersion ?? '24.04-lts',
     nodeVersion: manifest.nodeVersion ?? '24',
   }
@@ -115,7 +139,7 @@ export function buildBridgeEnvironment(input: {
   token: string
   port: number
   allowedOrigins: string[]
-  paths: Pick<DesktopPaths, 'rootfsPath' | 'agentPackagePath' | 'bootstrapPath'>
+  paths: Pick<DesktopPaths, 'rootfsPath' | 'agentPackagePath' | 'bootstrapPath' | 'nodeTarballPath' | 'openClawTarballPath'>
   assets: BridgeAssetContext
   baseEnv?: NodeJS.ProcessEnv
 }): NodeJS.ProcessEnv {
@@ -128,10 +152,14 @@ export function buildBridgeEnvironment(input: {
     AGENT_SECURITY_BUNDLED_ROOTFS_PATH: input.paths.rootfsPath,
     AGENT_SECURITY_BUNDLED_AGENT_PATH: input.paths.agentPackagePath,
     AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH: input.paths.bootstrapPath,
+    AGENT_SECURITY_BUNDLED_NODE_TARBALL_PATH: input.paths.nodeTarballPath,
+    AGENT_SECURITY_BUNDLED_OPENCLAW_TARBALL_PATH: input.paths.openClawTarballPath,
     AGENT_SECURITY_AGENT_INSTALL_URL: 'bundled://openclaw-agent.pkg',
     AGENT_SECURITY_ROOTFS_SHA256: input.assets.rootfsChecksum,
     AGENT_SECURITY_AGENT_INSTALL_SHA256: input.assets.agentChecksum,
     AGENT_SECURITY_BOOTSTRAP_SHA256: input.assets.bootstrapChecksum,
+    AGENT_SECURITY_NODE_TARBALL_SHA256: input.assets.nodeTarballChecksum,
+    AGENT_SECURITY_OPENCLAW_TARBALL_SHA256: input.assets.openClawTarballChecksum,
     AGENT_SECURITY_AGENT_NAME: input.assets.agentName,
     AGENT_SECURITY_UBUNTU_VERSION: input.assets.ubuntuVersion,
     AGENT_SECURITY_NODE_VERSION: input.assets.nodeVersion,

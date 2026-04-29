@@ -74,21 +74,31 @@ describe('bridge config', () => {
     const rootfs = join(root, 'agent-security-rootfs.tar')
     const agent = join(root, 'openclaw-agent.pkg')
     const bootstrap = join(root, 'openclaw-bootstrap.sh')
+    const nodeRuntime = join(root, 'node-v24-linux-x64.tar.xz')
+    const openClawTarball = join(root, 'openclaw-2026.4.26.tgz')
     await writeFile(rootfs, 'rootfs', 'utf8')
     await writeFile(agent, 'agent', 'utf8')
     await writeFile(bootstrap, 'bootstrap', 'utf8')
+    await writeFile(nodeRuntime, 'node runtime', 'utf8')
+    await writeFile(openClawTarball, 'openclaw tarball', 'utf8')
 
     process.env.AGENT_SECURITY_MODE = 'production'
     process.env.AGENT_SECURITY_BRIDGE_TOKEN = 'token'
     process.env.AGENT_SECURITY_BUNDLED_ROOTFS_PATH = rootfs
     process.env.AGENT_SECURITY_BUNDLED_AGENT_PATH = agent
     process.env.AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH = bootstrap
+    process.env.AGENT_SECURITY_BUNDLED_NODE_TARBALL_PATH = nodeRuntime
+    process.env.AGENT_SECURITY_BUNDLED_OPENCLAW_TARBALL_PATH = openClawTarball
     process.env.AGENT_SECURITY_ROOTFS_SHA256 =
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
     process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256 =
       'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789'
     process.env.AGENT_SECURITY_BOOTSTRAP_SHA256 =
       'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210'
+    process.env.AGENT_SECURITY_NODE_TARBALL_SHA256 =
+      '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff'
+    process.env.AGENT_SECURITY_OPENCLAW_TARBALL_SHA256 =
+      '11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff'
 
     const { createBridgeConfig } = await import('../../bridge/config.ts')
     const config = createBridgeConfig()
@@ -102,6 +112,12 @@ describe('bridge config', () => {
     expect(config.bundledAgentName).toBe('OpenClaw')
     expect(config.ubuntuVersion).toBe('24.04-lts')
     expect(config.nodeVersion).toBe('24')
+    expect(config.bundledNodeTarballChecksum).toBe(
+      '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff',
+    )
+    expect(config.bundledOpenClawTarballChecksum).toBe(
+      '11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff',
+    )
     expect(config.openClawInstallSource).toBe('npm')
     expect(config.openClawVersionPolicy).toBe('latest')
 

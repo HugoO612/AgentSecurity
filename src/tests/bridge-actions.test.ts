@@ -42,6 +42,10 @@ const baseConfig: BridgeConfig = {
   openClawPackageName: 'openclaw',
   bundledBootstrapPath: 'C:\\AgentSecurity\\bundled\\openclaw-bootstrap.sh',
   bundledBootstrapChecksum: 'fedcba9876543210',
+  bundledNodeTarballPath: 'C:\\AgentSecurity\\bundled\\node-v24-linux-x64.tar.xz',
+  bundledNodeTarballChecksum: 'abcdefabcdefabcdef',
+  bundledOpenClawTarballPath: 'C:\\AgentSecurity\\bundled\\openclaw-2026.4.26.tgz',
+  bundledOpenClawTarballChecksum: '1234567890abcdef',
 }
 
 afterEach(() => {
@@ -80,7 +84,7 @@ describe('bridge action planning', () => {
         return {
           exitCode: 0,
           stdout:
-            'sha256=0123456789abcdef\nrootfsSha256=abcdef0123456789\nbootstrapSha256=fedcba9876543210',
+            'sha256=0123456789abcdef\nrootfsSha256=abcdef0123456789\nbootstrapSha256=fedcba9876543210\nnodeTarballSha256=abcdefabcdefabcdef\nopenClawTarballSha256=1234567890abcdef',
           stderr: '',
         }
       }
@@ -188,7 +192,7 @@ describe('bridge action planning', () => {
         return {
           exitCode: 0,
           stdout:
-            'sha256=0123456789abcdef\nrootfsSha256=abcdef0123456789\nbootstrapSha256=fedcba9876543210',
+            'sha256=0123456789abcdef\nrootfsSha256=abcdef0123456789\nbootstrapSha256=fedcba9876543210\nnodeTarballSha256=abcdefabcdefabcdef\nopenClawTarballSha256=1234567890abcdef',
           stderr: '',
         }
       }

@@ -15,6 +15,8 @@ const rootfsSha256 = manifest.artifacts.rootfs.sha256
 const agentArtifact = manifest.artifacts.agentPackage ?? manifest.artifacts.agent
 const agentSha256 = agentArtifact.sha256
 const bootstrapSha256 = manifest.artifacts.bootstrap.sha256
+const nodeTarballSha256 = manifest.artifacts.nodeRuntime.sha256
+const openClawTarballSha256 = manifest.artifacts.openClawNpmTarball.sha256
 const installerPath = 'release/AgentSecurity Setup.exe'
 const installerShaPath = `${installerPath}.sha256`
 const installerSha256 = await readInstallerSha256(installerShaPath).catch(() => undefined)
@@ -35,10 +37,14 @@ const server = spawn(
       AGENT_SECURITY_ROOTFS_SHA256: rootfsSha256,
       AGENT_SECURITY_AGENT_INSTALL_SHA256: agentSha256,
       AGENT_SECURITY_BOOTSTRAP_SHA256: bootstrapSha256,
+      AGENT_SECURITY_NODE_TARBALL_SHA256: nodeTarballSha256,
+      AGENT_SECURITY_OPENCLAW_TARBALL_SHA256: openClawTarballSha256,
       AGENT_SECURITY_UBUNTU_VERSION: manifest.ubuntuVersion,
       AGENT_SECURITY_NODE_VERSION: manifest.nodeVersion,
       AGENT_SECURITY_OPENCLAW_INSTALL_SOURCE: manifest.openClawInstallSource,
       AGENT_SECURITY_OPENCLAW_VERSION_POLICY: manifest.openClawVersionPolicy,
+      AGENT_SECURITY_BUNDLED_NODE_TARBALL_PATH: resolve(manifest.artifacts.nodeRuntime.path),
+      AGENT_SECURITY_BUNDLED_OPENCLAW_TARBALL_PATH: resolve(manifest.artifacts.openClawNpmTarball.path),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   },
@@ -90,10 +96,14 @@ try {
       rootfs: manifest.artifacts.rootfs.path,
       agent: agentArtifact.path,
       bootstrap: manifest.artifacts.bootstrap.path,
+      nodeRuntime: manifest.artifacts.nodeRuntime.path,
+      openClawNpmTarball: manifest.artifacts.openClawNpmTarball.path,
       checksums: {
         rootfsSha256,
         agentSha256,
         bootstrapSha256,
+        nodeTarballSha256,
+        openClawTarballSha256,
       },
       version: manifest.version,
       source: manifest.source,
@@ -225,7 +235,8 @@ async function runAction(action, submitPath, pollBase, confirm = false) {
 }
 
 async function pollOperation(path) {
-  for (let index = 0; index < 120; index += 1) {
+  const maxPolls = Number(process.env.AGENT_SECURITY_LIVE_POLL_ATTEMPTS || '1800')
+  for (let index = 0; index < maxPolls; index += 1) {
     const operation = await requestJson(path)
     if (operation.status === 'succeeded' || operation.status === 'failed') {
       return operation
@@ -251,7 +262,7 @@ async function waitForHealth() {
 }
 
 async function requestJson(path, init = {}) {
-  const response = await fetch(`${origin}${path}`, {
+  const response = await fetchWithRetry(`${origin}${path}`, {
     method: init.method ?? 'GET',
     headers: {
       'content-type': 'application/json',
@@ -264,6 +275,19 @@ async function requestJson(path, init = {}) {
     throw new Error(`${path} returned ${response.status}: ${text}`)
   }
   return text ? JSON.parse(text) : null
+}
+
+async function fetchWithRetry(url, init) {
+  let lastError
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await fetch(url, init)
+    } catch (error) {
+      lastError = error
+      await sleep(1000)
+    }
+  }
+  throw lastError
 }
 
 function buildUnvalidatedExceptionMatrix() {

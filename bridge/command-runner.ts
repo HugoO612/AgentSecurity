@@ -104,6 +104,7 @@ export type CommandInvocation = {
   program: AllowedProgram
   args: string[]
   validate?: (result: CommandResult) => ValidationResult
+  cleanupOnTimeout?: () => void
 }
 
 export type TemplateCommandInput = {
@@ -123,6 +124,10 @@ export type TemplateCommandInput = {
   bundledAgentArtifactPath?: string
   bundledBootstrapPath?: string
   bundledBootstrapChecksum?: string
+  bundledNodeTarballPath?: string
+  bundledNodeTarballChecksum?: string
+  bundledOpenClawTarballPath?: string
+  bundledOpenClawTarballChecksum?: string
   ubuntuVersion?: string
   nodeVersion?: string
   openClawPackageName?: string
@@ -145,9 +150,15 @@ export type ResolvedExecutionContext = {
   bundledAgentArtifactPath: string
   bundledBootstrapPath: string
   bundledBootstrapChecksum: string
+  bundledNodeTarballPath: string
+  bundledNodeTarballChecksum: string
+  bundledOpenClawTarballPath: string
+  bundledOpenClawTarballChecksum: string
   stagedInstallerPath: string
   stagedRootfsPath: string
   stagedBootstrapPath: string
+  stagedNodeTarballPath: string
+  stagedOpenClawTarballPath: string
   ubuntuVersion: string
   nodeVersion: string
   openClawPackageName: string
@@ -515,6 +526,7 @@ export async function runTemplateCommand(
       timeoutMs,
       () => {
         timedOut = true
+        invocation.cleanupOnTimeout?.()
       },
     )
     const stdout = sanitizeAndTruncate(rawResult.stdout, MAX_STDOUT_CHARS, sensitiveValues)
@@ -661,9 +673,17 @@ function resolveTemplateContext(input: TemplateCommandInput): ResolvedExecutionC
     bundledBootstrapPath:
       input.bundledBootstrapPath ?? 'C:\\AgentSecurity\\bundled\\openclaw-bootstrap.sh',
     bundledBootstrapChecksum: input.bundledBootstrapChecksum ?? 'dev-skip-checksum',
+    bundledNodeTarballPath:
+      input.bundledNodeTarballPath ?? 'C:\\AgentSecurity\\bundled\\node-v24-linux-x64.tar.xz',
+    bundledNodeTarballChecksum: input.bundledNodeTarballChecksum ?? 'dev-skip-checksum',
+    bundledOpenClawTarballPath:
+      input.bundledOpenClawTarballPath ?? 'C:\\AgentSecurity\\bundled\\openclaw-2026.4.26.tgz',
+    bundledOpenClawTarballChecksum: input.bundledOpenClawTarballChecksum ?? 'dev-skip-checksum',
     stagedInstallerPath: `${runtimeDir}\\staged-agent.pkg`,
     stagedRootfsPath: `${runtimeDir}\\staged-rootfs.tar`,
     stagedBootstrapPath: `${runtimeDir}\\openclaw-bootstrap.sh`,
+    stagedNodeTarballPath: `${runtimeDir}\\node-v24-linux-x64.tar.xz`,
+    stagedOpenClawTarballPath: `${runtimeDir}\\openclaw-2026.4.26.tgz`,
     ubuntuVersion: input.ubuntuVersion ?? '24.04-lts',
     nodeVersion: input.nodeVersion ?? '24',
     openClawPackageName: input.openClawPackageName ?? 'openclaw',
@@ -691,9 +711,15 @@ function collectSensitiveValues(
     context.bundledAgentArtifactPath,
     context.bundledBootstrapPath,
     context.bundledBootstrapChecksum,
+    context.bundledNodeTarballPath,
+    context.bundledNodeTarballChecksum,
+    context.bundledOpenClawTarballPath,
+    context.bundledOpenClawTarballChecksum,
     context.stagedInstallerPath,
     context.stagedRootfsPath,
     context.stagedBootstrapPath,
+    context.stagedNodeTarballPath,
+    context.stagedOpenClawTarballPath,
     ...(input.additionalSensitiveValues ?? []),
   ].filter(Boolean)
 }
