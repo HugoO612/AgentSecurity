@@ -6,6 +6,10 @@ const forcedUnsigned = process.argv.includes('--unsigned')
 const forcedSigned = process.argv.includes('--signed')
 const installerPath = resolve('release', 'AgentSecurity Setup.exe')
 const shaPath = `${installerPath}.sha256`
+const packagedManifestPath = resolve('release', 'win-unpacked', 'resources', 'bridge-assets', 'release-assets-manifest.json')
+const installedManifestPath = process.env.LOCALAPPDATA
+  ? join(process.env.LOCALAPPDATA, 'Programs', 'agentsecurity', 'resources', 'bridge-assets', 'release-assets-manifest.json')
+  : ''
 const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const electronBuilderCli = resolve('node_modules', 'electron-builder', 'cli.js')
 const hasSigningMaterial =
@@ -15,7 +19,7 @@ const hasSigningMaterial =
 const unsigned = forcedUnsigned || (!forcedSigned && !hasSigningMaterial)
 
 if (forcedSigned && !hasSigningMaterial) {
-  await run('node', ['scripts/assert-windows-signing.mjs'])
+  await run(process.execPath, ['scripts/assert-windows-signing.mjs'])
 }
 
 if (unsigned && !forcedUnsigned) {
@@ -35,7 +39,7 @@ if (unsigned) {
 }
 
 await run(
-  'node',
+  process.execPath,
   [electronBuilderCli, ...electronBuilderArgs],
   unsigned
     ? {
@@ -53,11 +57,41 @@ await writeFile(
   'utf8',
 )
 
+await verifyInstalledAssetsAreNotStale()
+
 if (!unsigned) {
-  await run('node', ['scripts/verify-windows-signature.mjs', installerPath])
+  await run(process.execPath, ['scripts/verify-windows-signature.mjs', installerPath])
 }
 
 process.stdout.write(`${installerPath}\n${shaPath}\n`)
+
+async function verifyInstalledAssetsAreNotStale() {
+  if (!installedManifestPath) {
+    return
+  }
+
+  let packagedManifest
+  let installedManifest
+  try {
+    packagedManifest = JSON.parse(await readFile(packagedManifestPath, 'utf8'))
+    installedManifest = JSON.parse(await readFile(installedManifestPath, 'utf8'))
+  } catch {
+    return
+  }
+
+  if (JSON.stringify(packagedManifest) !== JSON.stringify(installedManifest)) {
+    if (installedManifest.version !== packagedManifest.version) {
+      process.stderr.write(
+        `Installed AgentSecurity assets are from ${installedManifest.version}; packaged assets are ${packagedManifest.version}. Install the new Setup.exe before final release validation.\n`,
+      )
+      return
+    }
+
+    throw new Error(
+      `Installed AgentSecurity assets are stale: installed ${installedManifest.version}, packaged ${packagedManifest.version}. Run the new installer or remove the old installation before release validation.`,
+    )
+  }
+}
 
 async function run(command, args, extraEnv = {}) {
   await new Promise((resolveRun, rejectRun) => {

@@ -42,7 +42,7 @@ export function createInitialSnapshot(
       nodeInstalled: false,
       openClawInstalled: false,
       openClawRunning: false,
-      onboardingUrl: 'http://127.0.0.1:3000',
+      onboardingUrl: 'http://127.0.0.1:18789/',
       onboardingCommand: 'open OpenClaw onboarding after install',
       installationLocationSummary: `${config.bundledAgentName} 将安装到专用隔离环境 ${config.targetDistro} 中。`,
       windowsHostWritesSummary: `Windows 主环境只会写入受控目录：${config.dataRoot}、${config.runtimeDir}、${config.diagnosticsDir}。`,

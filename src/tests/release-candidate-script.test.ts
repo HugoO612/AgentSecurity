@@ -240,7 +240,7 @@ describe('release candidate validation script', () => {
     )
 
     const { stdout } = await execFileAsync(
-      'node',
+      process.execPath,
       ['scripts/validate-release-candidate.mjs', '--evidence', evidencePath],
       {
         cwd: 'A:\\AgentSecurity',
@@ -298,7 +298,7 @@ describe('release candidate validation script', () => {
 
     await expect(
       execFileAsync(
-        'node',
+        process.execPath,
         ['scripts/validate-release-candidate.mjs', '--evidence', evidencePath],
         { cwd: 'A:\\AgentSecurity' },
       ),

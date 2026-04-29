@@ -21,7 +21,7 @@
     },
     "bootstrap": {
       "path": "bridge/assets/openclaw-bootstrap.sh",
-      "sha256": "4699adabc3eb91a5e9d95534e512c4504e9fd633efa04df34674484973865a06"
+      "sha256": "9c6b0181c9d172bf1e1eb88a72a491b37a30d8be96ef906c81e65aa30d09f7f1"
     },
     "nodeRuntime": {
       "path": "bridge/assets/node-v24.15.0-linux-x64.tar.xz",

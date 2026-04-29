@@ -56,6 +56,39 @@ install_system_prerequisites() {
   exit 27
 }
 
+install_node_from_bundled_tarball() {
+  if [ -z "$node_tarball" ]; then
+    return 1
+  fi
+  if [ ! -f "$node_tarball" ]; then
+    echo "Bundled Node tarball is missing: $node_tarball" >&2
+    exit 24
+  fi
+  if ! command -v sha256sum >/dev/null 2>&1; then
+    echo "sha256sum is required to verify bundled Node ${node_major}" >&2
+    exit 30
+  fi
+  if ! command -v tar >/dev/null 2>&1; then
+    echo "tar is required to unpack bundled Node ${node_major}" >&2
+    exit 31
+  fi
+  if [ -n "$node_tarball_sha256" ] && [ "$(sha256sum "$node_tarball" | awk '{print $1}')" != "$node_tarball_sha256" ]; then
+    echo "Bundled Node tarball checksum mismatch" >&2
+    exit 25
+  fi
+
+  rm -rf /opt/node-v"${node_major}"
+  mkdir -p /opt/node-v"${node_major}"
+  if ! tar -xJf "$node_tarball" -C /opt/node-v"${node_major}" --strip-components=1; then
+    echo "Unable to unpack bundled Node ${node_major}; rootfs must provide tar with xz support or xz-utils." >&2
+    exit 32
+  fi
+  ln -sf /opt/node-v"${node_major}"/bin/node /usr/local/bin/node
+  ln -sf /opt/node-v"${node_major}"/bin/npm /usr/local/bin/npm
+  ln -sf /opt/node-v"${node_major}"/bin/npx /usr/local/bin/npx
+  return 0
+}
+
 install_node_from_dist() {
   arch="$(uname -m)"
   case "$arch" in
@@ -67,17 +100,6 @@ install_node_from_dist() {
   sums_path="/tmp/node-shasums.txt"
   tar_name=""
   tar_path=""
-  if [ -n "$node_tarball" ]; then
-    if [ ! -f "$node_tarball" ]; then
-      echo "Bundled Node tarball is missing: $node_tarball" >&2
-      exit 24
-    fi
-    if [ -n "$node_tarball_sha256" ] && [ "$(sha256sum "$node_tarball" | awk '{print $1}')" != "$node_tarball_sha256" ]; then
-      echo "Bundled Node tarball checksum mismatch" >&2
-      exit 25
-    fi
-    tar_path="$node_tarball"
-  else
   mirrors="$node_mirror $node_mirror_fallbacks"
   for mirror in $mirrors; do
     echo "Trying Node ${node_major} download from ${mirror}"
@@ -108,7 +130,6 @@ install_node_from_dist() {
     echo "Unable to download Node ${node_major} from every configured mirror." >&2
     exit 24
   fi
-  fi
   rm -rf /opt/node-v"${node_major}"
   mkdir -p /opt/node-v"${node_major}"
   tar -xJf "$tar_path" -C /opt/node-v"${node_major}" --strip-components=1
@@ -118,12 +139,14 @@ install_node_from_dist() {
 }
 
 if ! command -v node >/dev/null 2>&1 || ! node --version | grep -Eq "^v${node_major}\\."; then
-  if command -v apt-get >/dev/null 2>&1; then
+  if install_node_from_bundled_tarball; then
+    :
+  elif command -v apt-get >/dev/null 2>&1; then
     export DEBIAN_FRONTEND=noninteractive
     install_system_prerequisites
     install_node_from_dist
   else
-    echo "apt-get is required to install Node ${node_major}" >&2
+    echo "Bundled Node tarball or apt-get is required to install Node ${node_major}" >&2
     exit 20
   fi
 fi
@@ -213,15 +236,19 @@ cat > "$install_root/bin/start-agent-security.sh" <<'EOF'
 set -eu
 mkdir -p /var/lib/agent-security /var/log/agent-security
 export PATH="/usr/local/sbin:/usr/local/bin:/opt/node-v24/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+port="${OPENCLAW_ONBOARDING_PORT:-18789}"
+export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-openclaw-manager-local-token}"
 if command -v openclaw >/dev/null 2>&1; then
-  openclaw --no-color gateway --allow-unconfigured --bind loopback --auth none run >>/var/log/agent-security/openclaw.log 2>&1 &
+  openclaw gateway --port "$port" >>/var/log/agent-security/openclaw.log 2>&1 &
 else
   echo "openclaw command not found" >&2
   exit 22
 fi
 pid=$!
 echo "$pid" >/var/run/agent-security.pid
+echo "http://127.0.0.1:${port}/?token=${OPENCLAW_GATEWAY_TOKEN}" >/var/lib/agent-security/onboarding-url
 echo running >/var/lib/agent-security/state
+trap 'kill "$pid" >/dev/null 2>&1 || true; echo stopped >/var/lib/agent-security/state; exit 0' TERM INT
 wait "$pid"
 EOF
 chmod +x "$install_root/bin/start-agent-security.sh"

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import type {
   ActionReceipt,
   ActionRequest,
@@ -53,6 +54,8 @@ type ActionCommandPlan = {
   command: TemplateCommandId
   stage: OperationSnapshot['stage']
 }
+
+const OPENCLAW_ONBOARDING_URL = 'http://127.0.0.1:18789/'
 
 export async function planActionExecution(
   request: ActionRequest,
@@ -239,8 +242,9 @@ async function planFormalInstaller(
     createInstallerPlan(isRetry),
   )
 
+  const onboardingUrl = execution.ok ? await readRuntimeOnboardingUrl(config) : OPENCLAW_ONBOARDING_URL
   const finalSnapshot = execution.ok
-    ? buildInstallerSuccessSnapshot(snapshot, config, now, execution.audits)
+    ? buildInstallerSuccessSnapshot(snapshot, config, now, execution.audits, undefined, onboardingUrl)
     : buildFailureSnapshot(
         snapshot,
         config,
@@ -352,6 +356,7 @@ async function planStart(
     { command: 'health_check', stage: 'verifying_install' },
   ])
 
+  const onboardingUrl = execution.ok ? await readRuntimeOnboardingUrl(config) : OPENCLAW_ONBOARDING_URL
   const finalSnapshot = execution.ok
     ? finalizeSnapshot(
         {
@@ -365,6 +370,8 @@ async function planStart(
           runtime: {
             ...snapshot.runtime,
             processState: 'running',
+            openClawRunning: true,
+            onboardingUrl,
             lastStartedAt: now,
           },
           health: {
@@ -519,6 +526,7 @@ async function planRestart(
     { command: 'health_check', stage: 'verifying_install' },
   ])
 
+  const onboardingUrl = execution.ok ? await readRuntimeOnboardingUrl(config) : OPENCLAW_ONBOARDING_URL
   const finalSnapshot = execution.ok
     ? finalizeSnapshot(
         {
@@ -532,6 +540,8 @@ async function planRestart(
           runtime: {
             ...snapshot.runtime,
             processState: 'running',
+            openClawRunning: true,
+            onboardingUrl,
             lastStartedAt: now,
           },
           health: {
@@ -613,7 +623,14 @@ async function planRebuild(
   ])
 
   const finalSnapshot = execution.ok
-    ? buildInstallerSuccessSnapshot(snapshot, config, now, execution.audits, snapshot.generation + 1)
+    ? buildInstallerSuccessSnapshot(
+        snapshot,
+        config,
+        now,
+        execution.audits,
+        snapshot.generation + 1,
+        await readRuntimeOnboardingUrl(config),
+      )
     : buildFailureSnapshot(
         snapshot,
         config,
@@ -829,12 +846,23 @@ async function executeActionPlan(
   }
 }
 
+async function readRuntimeOnboardingUrl(config: BridgeConfig) {
+  try {
+    const value = await readFile(`${config.runtimeDir}\\onboarding.url`, 'utf8')
+    const url = value.trim()
+    return url.startsWith('http://127.0.0.1:') ? url : OPENCLAW_ONBOARDING_URL
+  } catch {
+    return OPENCLAW_ONBOARDING_URL
+  }
+}
+
 function buildInstallerSuccessSnapshot(
   snapshot: EnvironmentSnapshot,
   config: BridgeConfig,
   now: string,
   audits: CommandAuditSummary[],
   generation = snapshot.generation + 1,
+  onboardingUrl = OPENCLAW_ONBOARDING_URL,
 ) {
   return finalizeSnapshot(
     {
@@ -863,7 +891,7 @@ function buildInstallerSuccessSnapshot(
         nodeInstalled: true,
         openClawInstalled: true,
         openClawRunning: true,
-        onboardingUrl: 'http://127.0.0.1:3000',
+        onboardingUrl,
         onboardingCommand: 'Open the OpenClaw onboarding page after startup.',
         processState: 'running',
         lastStartedAt: now,
@@ -886,7 +914,7 @@ function buildInstallerSuccessSnapshot(
         remainingItems: [config.dataRoot, config.runtimeDir, config.diagnosticsDir, config.reportDir],
         windowsHostResidualSummary: `正式版当前会在 Windows 主环境保留受控目录：${config.dataRoot}。`,
       },
-      capabilities: deriveCapabilities('ready', false),
+      capabilities: deriveCapabilities('running', false),
       recovery: {
         recommendedAction: undefined,
         availableActions: ['rebuild', 'delete', 'export_support_bundle'],
@@ -936,6 +964,26 @@ function buildFailureSnapshot(
         ...snapshot.installation,
         state: installationState,
         lastInstallAttemptAt: now,
+      },
+      runtime: {
+        ...snapshot.runtime,
+        processState: installationState === 'install-failed' ? 'failed' : snapshot.runtime.processState,
+        openClawRunning:
+          installationState === 'install-failed' || installationState === 'degraded'
+            ? false
+            : snapshot.runtime.openClawRunning,
+      },
+      health: {
+        status:
+          installationState === 'install-failed' || installationState === 'degraded'
+            ? 'unhealthy'
+            : snapshot.health.status,
+        startupFailureCount:
+          failure.stage === 'agent_start' || failure.stage === 'health_check'
+            ? snapshot.health.startupFailureCount + 1
+            : snapshot.health.startupFailureCount,
+        lastCheckedAt: now,
+        reasons: [failure.message],
       },
       failure,
       commandAudits: appendCommandAudits(snapshot.commandAudits, audits),

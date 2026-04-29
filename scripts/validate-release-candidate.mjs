@@ -50,6 +50,8 @@ const requiredAssetPaths = {
   rootfs: resolve(assetRoot, 'agent-security-rootfs.tar'),
   agent: resolve(assetRoot, 'openclaw-agent.pkg'),
   bootstrap: resolve(assetRoot, 'openclaw-bootstrap.sh'),
+  nodeRuntime: resolve(assetRoot, 'node-v24.15.0-linux-x64.tar.xz'),
+  openClawNpmTarball: resolve(assetRoot, 'openclaw-2026.4.26.tgz'),
 }
 const sha256Pattern = /^[0-9a-f]{64}$/i
 const placeholderValues = new Set(['REPLACE_ME', 'NOT_VALIDATED', 'missing', ''])
@@ -139,7 +141,10 @@ async function validateReleaseEvidence(evidence, manifest) {
   await validateAssetChecksum('rootfs', rootfsChecksum)
   await validateAssetChecksum('agent', agentChecksum)
   await validateAssetChecksum('bootstrap', bootstrapChecksum)
+  await validateReleaseRootfs(requiredAssetPaths.rootfs)
   validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecksum, bootstrapChecksum)
+  await validateAssetChecksum('nodeRuntime', manifest.artifacts.nodeRuntime.sha256)
+  await validateAssetChecksum('openClawNpmTarball', manifest.artifacts.openClawNpmTarball.sha256)
   await validateWindowsInstaller(evidence)
 
   if (!isRealValue(evidence.candidateVersion)) {
@@ -281,6 +286,8 @@ function validateExceptionMatrix(evidence) {
 
 function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecksum, bootstrapChecksum) {
   const agentArtifact = manifest.artifacts?.agentPackage ?? manifest.artifacts?.agent
+  const nodeRuntimeArtifact = manifest.artifacts?.nodeRuntime
+  const openClawNpmTarballArtifact = manifest.artifacts?.openClawNpmTarball
   if (!manifest) {
     throw new Error('release-assets-manifest.json is required for public launch evidence.')
   }
@@ -322,6 +329,12 @@ function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecks
   if (manifest.artifacts?.bootstrap?.path !== 'bridge/assets/openclaw-bootstrap.sh') {
     throw new Error('Asset manifest bootstrap path must be fixed.')
   }
+  if (nodeRuntimeArtifact?.path !== 'bridge/assets/node-v24.15.0-linux-x64.tar.xz') {
+    throw new Error('Asset manifest Node runtime path must be fixed.')
+  }
+  if (openClawNpmTarballArtifact?.path !== 'bridge/assets/openclaw-2026.4.26.tgz') {
+    throw new Error('Asset manifest OpenClaw npm tarball path must be fixed.')
+  }
   if (manifest.artifacts?.rootfs?.sha256 !== rootfsChecksum.toLowerCase()) {
     throw new Error('Asset manifest rootfs checksum must match evidence.')
   }
@@ -331,6 +344,8 @@ function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecks
   if (manifest.artifacts?.bootstrap?.sha256 !== bootstrapChecksum.toLowerCase()) {
     throw new Error('Asset manifest bootstrap checksum must match evidence.')
   }
+  validateSha256('manifest.artifacts.nodeRuntime.sha256', nodeRuntimeArtifact?.sha256)
+  validateSha256('manifest.artifacts.openClawNpmTarball.sha256', openClawNpmTarballArtifact?.sha256)
 }
 
 function isRealValue(value) {
@@ -381,6 +396,61 @@ async function validateAssetChecksum(kind, expectedChecksum) {
   }
 }
 
+async function validateReleaseRootfs(path) {
+  let listing
+  try {
+    const { stdout } = await execFileAsync('tar', ['-tf', path], {
+      maxBuffer: 16 * 1024 * 1024,
+    })
+    listing = stdout
+  } catch (error) {
+    throw new Error(`Unable to inspect rootfs tarball: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  const entries = new Set(
+    listing
+      .split(/\r?\n/)
+      .map((entry) => entry.replace(/^\.\//, '').replace(/\/$/, ''))
+      .filter(Boolean),
+  )
+  const missing = [
+    'etc/os-release',
+    'usr/bin/apt-get',
+    'usr/bin/tar',
+    'usr/bin/sha256sum',
+  ].filter((entry) => !entries.has(entry))
+  if (missing.length > 0) {
+    throw new Error(`Rootfs is missing required Ubuntu runtime files: ${missing.join(', ')}`)
+  }
+  if (!entries.has('usr/bin/xz') && !entries.has('bin/xz') && !entries.has('usr/lib/apt/apt-helper')) {
+    throw new Error('Rootfs is missing xz support required for bundled Node.')
+  }
+
+  const text = await readRootfsText(path, [
+    './etc/os-release',
+    'etc/os-release',
+    './usr/lib/os-release',
+    'usr/lib/os-release',
+  ])
+  if (!/Ubuntu/i.test(text) || !/VERSION_ID="?24\.04"?/.test(text)) {
+    throw new Error('Rootfs must identify as Ubuntu 24.04 in /etc/os-release.')
+  }
+}
+
+async function readRootfsText(path, candidates) {
+  for (const candidate of candidates) {
+    try {
+      const { stdout } = await execFileAsync('tar', ['-xOf', path, candidate])
+      if (stdout.trim()) {
+        return stdout
+      }
+    } catch {
+      // Try the next archive path spelling.
+    }
+  }
+  throw new Error(`Unable to read rootfs file from candidates: ${candidates.join(', ')}`)
+}
+
 async function validateWindowsInstaller(evidence) {
   const installer = evidence.releaseArtifacts?.windowsInstaller
   if (!installer) {
@@ -419,7 +489,7 @@ async function validateWindowsInstaller(evidence) {
     return
   }
 
-  await execFileAsync('node', ['scripts/verify-windows-signature.mjs', installerPath])
+  await execFileAsync(process.execPath, ['scripts/verify-windows-signature.mjs', installerPath])
 }
 
 function formatPathForMessage(path) {

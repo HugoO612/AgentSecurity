@@ -15,7 +15,7 @@ if (!tag) {
 
 let signatureStatus = 'Unsigned'
 try {
-  await execFileAsync('node', ['scripts/verify-windows-signature.mjs', installerPath])
+  await execFileAsync(process.execPath, ['scripts/verify-windows-signature.mjs', installerPath])
   signatureStatus = 'Valid'
 } catch {
   process.stderr.write(

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BridgeConfig } from '../../bridge/config.ts'
 
 vi.mock('../../bridge/command-executor.ts', () => ({
@@ -31,15 +31,27 @@ import { buildPrecheck } from '../../bridge/precheck.ts'
 const config = {
   runtimeDir: 'A:\\AgentSecurity',
 } as unknown as BridgeConfig
+const originalPlatform = process.platform
 
 describe('bridge precheck', () => {
   beforeEach(() => {
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    })
     vi.mocked(lookup).mockResolvedValue({ address: '127.0.0.1', family: 4 } as never)
     vi.mocked(statfs).mockResolvedValue({ bavail: 10_000_000, bsize: 4096 } as never)
     vi.mocked(runAllowedCommand).mockResolvedValue({
       exitCode: 0,
       stdout: 'WSL is available.',
       stderr: '',
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', {
+      value: originalPlatform,
+      configurable: true,
     })
   })
 

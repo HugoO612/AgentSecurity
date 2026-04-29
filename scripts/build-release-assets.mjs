@@ -178,6 +178,7 @@ if (bundledOpenClawPath) {
 }
 
 const rootfsSource = await resolveUbuntuRootfsSource()
+await validateReleaseRootfs(rootfsPath, rootfsSource)
 
 const [
   rootfsSha256,
@@ -248,7 +249,72 @@ async function resolveUbuntuRootfsSource() {
     return `ubuntu-24.04-lts-official:${ubuntuRootfsUrl}`
   }
 
-  return 'dev-busybox-placeholder'
+  throw new Error(
+    'A real Ubuntu 24.04 rootfs is required. Set AGENT_SECURITY_UBUNTU_ROOTFS_PATH or AGENT_SECURITY_DOWNLOAD_UBUNTU_ROOTFS=1.',
+  )
+}
+
+async function validateReleaseRootfs(path, source) {
+  if (!source.includes('ubuntu-24.04-lts') || source.includes('dev-busybox-placeholder') || source.includes('busybox')) {
+    throw new Error(`Release rootfs source is not a real Ubuntu 24.04 LTS source: ${source}`)
+  }
+
+  const listing = await execFileText('tar', ['-tf', path])
+  const entries = new Set(
+    listing
+      .split(/\r?\n/)
+      .map((entry) => entry.replace(/^\.\//, '').replace(/\/$/, ''))
+      .filter(Boolean),
+  )
+  const requiredEntries = [
+    'etc/os-release',
+    'usr/bin/apt-get',
+    'usr/bin/tar',
+    'usr/bin/sha256sum',
+  ]
+  const missing = requiredEntries.filter((entry) => !entries.has(entry))
+  if (missing.length > 0) {
+    throw new Error(`Release rootfs is missing required files: ${missing.join(', ')}`)
+  }
+
+  const osRelease = await readRootfsText(path, [
+    './etc/os-release',
+    'etc/os-release',
+    './usr/lib/os-release',
+    'usr/lib/os-release',
+  ])
+  if (!/VERSION_ID="?24\.04"?/.test(osRelease) || !/Ubuntu/i.test(osRelease)) {
+    throw new Error('Release rootfs must identify as Ubuntu 24.04 in /etc/os-release.')
+  }
+
+  const hasXz =
+    entries.has('usr/bin/xz') ||
+    entries.has('bin/xz') ||
+    entries.has('usr/lib/apt/apt-helper')
+  if (!hasXz) {
+    throw new Error('Release rootfs must include xz support so bundled Node can be unpacked.')
+  }
+}
+
+async function readRootfsText(path, candidates) {
+  for (const candidate of candidates) {
+    try {
+      const content = await execFileText('tar', ['-xOf', path, candidate])
+      if (content.trim()) {
+        return content
+      }
+    } catch {
+      // Try the next archive path spelling.
+    }
+  }
+  throw new Error(`Unable to read rootfs file from candidates: ${candidates.join(', ')}`)
+}
+
+async function execFileText(command, args) {
+  const { stdout } = await execFileAsync(command, args, {
+    maxBuffer: 16 * 1024 * 1024,
+  })
+  return stdout
 }
 
 async function downloadFile(url, target) {
