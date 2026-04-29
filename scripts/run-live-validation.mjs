@@ -14,6 +14,7 @@ const evidencePath =
 const rootfsSha256 = manifest.artifacts.rootfs.sha256
 const agentArtifact = manifest.artifacts.agentPackage ?? manifest.artifacts.agent
 const agentSha256 = agentArtifact.sha256
+const bootstrapSha256 = manifest.artifacts.bootstrap.sha256
 const installerPath = 'release/AgentSecurity Setup.exe'
 const installerShaPath = `${installerPath}.sha256`
 const installerSha256 = await readInstallerSha256(installerShaPath).catch(() => undefined)
@@ -33,6 +34,11 @@ const server = spawn(
       AGENT_SECURITY_BRIDGE_TOKEN: token,
       AGENT_SECURITY_ROOTFS_SHA256: rootfsSha256,
       AGENT_SECURITY_AGENT_INSTALL_SHA256: agentSha256,
+      AGENT_SECURITY_BOOTSTRAP_SHA256: bootstrapSha256,
+      AGENT_SECURITY_UBUNTU_VERSION: manifest.ubuntuVersion,
+      AGENT_SECURITY_NODE_VERSION: manifest.nodeVersion,
+      AGENT_SECURITY_OPENCLAW_INSTALL_SOURCE: manifest.openClawInstallSource,
+      AGENT_SECURITY_OPENCLAW_VERSION_POLICY: manifest.openClawVersionPolicy,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   },
@@ -83,13 +89,19 @@ try {
     bundledArtifacts: {
       rootfs: manifest.artifacts.rootfs.path,
       agent: agentArtifact.path,
+      bootstrap: manifest.artifacts.bootstrap.path,
       checksums: {
         rootfsSha256,
         agentSha256,
+        bootstrapSha256,
       },
       version: manifest.version,
       source: manifest.source,
       updatePolicy: manifest.updatePolicy,
+      ubuntuVersion: manifest.ubuntuVersion,
+      nodeVersion: manifest.nodeVersion,
+      openClawInstallSource: manifest.openClawInstallSource,
+      openClawVersionPolicy: manifest.openClawVersionPolicy,
     },
     releaseArtifacts: installerSha256
       ? {

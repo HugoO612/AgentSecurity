@@ -82,6 +82,10 @@
         "to": "bridge-assets/openclaw-agent.pkg"
       },
       {
+        "from": "bridge/assets/openclaw-bootstrap.sh",
+        "to": "bridge-assets/openclaw-bootstrap.sh"
+      },
+      {
         "from": "bridge/assets/release-assets-manifest.json",
         "to": "bridge-assets/release-assets-manifest.json"
       }

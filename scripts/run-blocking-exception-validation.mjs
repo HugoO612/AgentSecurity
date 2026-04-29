@@ -11,6 +11,7 @@ const runRoot = resolve('.tmp', 'blocking-exception-validation', timestampForPat
 const committedResultPath = 'docs/blocking-exception-results-2026-04-28.json'
 const goodRootfs = resolve('bridge/assets/agent-security-rootfs.tar')
 const goodAgent = resolve('bridge/assets/openclaw-agent.pkg')
+const goodBootstrap = resolve('bridge/assets/openclaw-bootstrap.sh')
 let nextPort = Number(process.env.AGENT_SECURITY_EXCEPTION_PORT ?? 4590)
 
 await mkdir(runRoot, { recursive: true })
@@ -248,12 +249,19 @@ function buildBridgeEnv(context, extraEnv) {
     AGENT_SECURITY_ROOTFS_SHA256: manifest.artifacts.rootfs.sha256,
     AGENT_SECURITY_AGENT_INSTALL_SHA256:
       manifest.artifacts.agentPackage?.sha256 ?? manifest.artifacts.agent.sha256,
+    AGENT_SECURITY_BOOTSTRAP_SHA256: manifest.artifacts.bootstrap.sha256,
     AGENT_SECURITY_AGENT_INSTALL_URL: 'bundled://openclaw-agent.pkg',
     AGENT_SECURITY_AGENT_NAME: manifest.agentName ?? 'OpenClaw',
+    AGENT_SECURITY_UBUNTU_VERSION: manifest.ubuntuVersion ?? '24.04-lts',
+    AGENT_SECURITY_NODE_VERSION: manifest.nodeVersion ?? '24',
+    AGENT_SECURITY_OPENCLAW_INSTALL_SOURCE: manifest.openClawInstallSource ?? 'npm',
+    AGENT_SECURITY_OPENCLAW_VERSION_POLICY: manifest.openClawVersionPolicy ?? 'latest',
     AGENT_SECURITY_BUNDLED_ROOTFS_PATH:
       extraEnv.AGENT_SECURITY_BUNDLED_ROOTFS_PATH ?? goodRootfs,
     AGENT_SECURITY_BUNDLED_AGENT_PATH:
       extraEnv.AGENT_SECURITY_BUNDLED_AGENT_PATH ?? goodAgent,
+    AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH:
+      extraEnv.AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH ?? goodBootstrap,
   }
 }
 

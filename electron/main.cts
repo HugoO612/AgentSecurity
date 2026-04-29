@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import {
   buildBridgeEnvironment,
   findAvailablePort,
@@ -23,6 +23,7 @@ void startDesktopApp()
 
 async function startDesktopApp() {
   await app.whenReady()
+  registerDesktopIpcHandlers()
   const bridgePort = await findAvailablePort()
   const bridgeToken = randomUUID()
   const desktopPaths = resolveDesktopPaths({
@@ -45,6 +46,7 @@ async function startDesktopApp() {
     allowedOrigins,
     rootfsPath: desktopPaths.rootfsPath,
     agentPackagePath: desktopPaths.agentPackagePath,
+    bootstrapPath: desktopPaths.bootstrapPath,
     assets,
     mode,
   })
@@ -84,6 +86,35 @@ async function startDesktopApp() {
       })
     }
   })
+}
+
+function registerDesktopIpcHandlers() {
+  ipcMain.handle('agent-security:open-external', async (_event: unknown, url: unknown) => {
+    if (typeof url !== 'string' || !isAllowedOpenClawUrl(url)) {
+      throw new Error('Only local OpenClaw onboarding URLs can be opened.')
+    }
+
+    await shell.openExternal(url)
+    return { ok: true }
+  })
+}
+
+function isAllowedOpenClawUrl(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl)
+    const hostname = url.hostname.toLowerCase()
+    return (
+      url.protocol === 'http:' &&
+      (hostname === '127.0.0.1' || hostname === 'localhost') &&
+      Number.isInteger(Number(url.port)) &&
+      Number(url.port) > 0 &&
+      Number(url.port) <= 65535 &&
+      !url.username &&
+      !url.password
+    )
+  } catch {
+    return false
+  }
 }
 
 function createMainWindow(input: {
@@ -136,6 +167,7 @@ function spawnBridgeProcess(input: {
   allowedOrigins: string[]
   rootfsPath: string
   agentPackagePath: string
+  bootstrapPath: string
   assets: Awaited<ReturnType<typeof readBridgeAssetContext>>
   mode: 'dev' | 'production'
 }) {
@@ -147,6 +179,7 @@ function spawnBridgeProcess(input: {
     paths: {
       rootfsPath: input.rootfsPath,
       agentPackagePath: input.agentPackagePath,
+      bootstrapPath: input.bootstrapPath,
     },
     assets: input.assets,
     baseEnv: process.env,

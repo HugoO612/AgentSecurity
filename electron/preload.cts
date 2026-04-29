@@ -1,4 +1,4 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import {
   decodeDesktopBootstrapArg,
   resolveDesktopAppOrigin,
@@ -12,3 +12,9 @@ if (bootstrap) {
     appOrigin: resolveDesktopAppOrigin(globalThis.location?.origin),
   }))
 }
+
+contextBridge.exposeInMainWorld('__AGENT_SECURITY_DESKTOP__', Object.freeze({
+  openExternal(url: string) {
+    return ipcRenderer.invoke('agent-security:open-external', url)
+  },
+}))

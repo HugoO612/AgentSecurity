@@ -8,8 +8,8 @@ This release defaults to a Windows EXE that opens into a one-click WSL2 isolated
 2. Run the Windows installer. If Windows shows an unknown publisher warning, verify the `.sha256` file from the GitHub Release before installing.
 3. Open AgentSecurity after install and click the one explicit action to install WSL2 and OpenClaw.
 4. Approve the Windows administrator prompt if WSL2 setup requires it.
-5. Wait for the installer to create the dedicated `AgentSecurity` WSL2 environment.
-6. Use the app controls to start, stop, rebuild, or delete the environment.
+5. Wait for the installer to create the dedicated Ubuntu 24.04 WSL2 environment, install Node 24, install OpenClaw from npm latest, and start OpenClaw.
+6. Use the app controls to open onboarding, view logs, start, stop, restart, rebuild, or delete the environment.
 
 If Windows says WSL2 is disabled, enable or install WSL2, reboot if prompted, then rerun the installer. If Windows restarts during setup, rerun the installer after reboot. If the agent fails to start, retry start first, then rebuild, or delete and reinstall.
 
@@ -18,7 +18,7 @@ If Windows says WSL2 is disabled, enable or install WSL2, reboot if prompted, th
 - Windows only.
 - WSL2 only.
 - Dedicated `AgentSecurity` distro only.
-- Bundled rootfs and bundled OpenClaw package only.
+- Bundled Ubuntu 24.04 LTS rootfs and bundled bootstrap; OpenClaw installed from npm latest.
 - No install into the Windows host runtime.
 - No reuse of user-managed Ubuntu or another existing distro.
 
@@ -43,9 +43,14 @@ The v1 public release gate requires:
 
 - main lifecycle live validation: install, start, stop, rebuild, and delete
 - bundled assets manifest matching release evidence
+- Ubuntu 24.04 LTS, Node 24, npm install source, and OpenClaw latest policy recorded in evidence
 - real validation for `permission_denied`, `artifact_missing`, `checksum_mismatch`, and `delete_failure`
 - documented recovery guidance for `wsl_disabled`, `reboot_interrupted`, and `startup_failure`
 - `AgentSecurity Setup.exe` SHA256 verified, with signature status recorded as `Valid` or `Unsigned`
 - passing `scripts/validate-release-candidate.mjs`
 
 AgentSecurity v1 has verified the main install/start/stop/rebuild/delete lifecycle and covers critical failure scenarios. Some system-level boundary cases, including WSL not enabled, reboot interruption, and agent startup failure, provide explicit recovery guidance; later versions will continue improving automatic recovery.
+
+## Current Manager Candidate Status
+
+The Electron manager and EXE packaging path now include the OpenClaw bootstrap assets and npm latest policy, but public release is held until live evidence proves installation on a real Ubuntu 24.04 LTS WSL2 rootfs.

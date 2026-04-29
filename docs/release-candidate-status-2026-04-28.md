@@ -2,7 +2,7 @@
 
 Date: 2026-04-28  
 Commit: `0ce54c8`  
-Decision: `GO`
+Decision: `HOLD`
 
 ## Verified In This Workspace
 
@@ -69,9 +69,9 @@ Decision: `GO`
   - WSL disabled
   - reboot interrupted
   - startup failure
-- The release gate includes `releaseArtifacts.windowsInstaller` with SHA256 and `signatureStatus: "Unsigned"`.
+- The release gate now also requires Ubuntu 24.04 LTS, Node 24, bootstrap SHA256, npm install source, and OpenClaw latest policy evidence.
 
 ## Required Next Step
 
-Align the GitHub Release assets with `docs/release-notes-v1.0.0-wsl2.md`: publish `AgentSecurity Setup.exe` and `AgentSecurity Setup.exe.sha256` as the default assets.
+Refresh live evidence on a real Ubuntu 24.04 LTS WSL2 rootfs, then publish `AgentSecurity Setup.exe` and `AgentSecurity Setup.exe.sha256` as the default assets.
 

@@ -125,6 +125,10 @@ export type OperationStage =
   | 'write_runtime_config'
   | 'health_check'
   | 'cleanup_environment'
+  | 'verifying_bootstrap'
+  | 'installing_node'
+  | 'installing_openclaw'
+  | 'opening_onboarding'
 
 export type BridgeConnectionFailureKind =
   | 'bootstrap_invalid'
@@ -305,6 +309,18 @@ export interface EnvironmentSnapshot {
     distroName?: string
     agentName?: string
     agentVersion?: string
+    ubuntuVersion?: string
+    nodeVersion?: string
+    npmVersion?: string
+    openClawInstallSource?: 'npm' | 'bundled' | 'unknown'
+    openClawVersionPolicy?: 'latest' | 'pinned' | 'unknown'
+    wslAvailable?: boolean
+    distroPresent?: boolean
+    nodeInstalled?: boolean
+    openClawInstalled?: boolean
+    openClawRunning?: boolean
+    onboardingUrl?: string
+    onboardingCommand?: string
     processState?: ProcessState
     lastStartedAt?: string
     lastStoppedAt?: string

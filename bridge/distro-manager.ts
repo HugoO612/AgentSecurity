@@ -15,7 +15,7 @@ export function buildCreateDistroInvocation(
       [
         `$distro='${escapePowershellString(context.targetDistro)}'`,
         `$distroPath='${escapePowershellString(`${context.distroInstallRoot}\\${context.targetDistro}`)}'`,
-        `$rootfs='${escapePowershellString(context.bundledRootfsPath)}'`,
+        `$rootfs='${escapePowershellString(context.stagedRootfsPath)}'`,
         `$expectedRootfsSha256='${escapePowershellString(context.bundledRootfsChecksum)}'`,
         '$existing = (& wsl.exe -l -q) -split "`r?`n" | ForEach-Object { ($_ -replace "`0","").Trim() } | Where-Object { $_ }',
         'if ($existing -contains $distro) { Write-Output "distro-exists"; exit 0 }',

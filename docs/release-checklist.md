@@ -72,12 +72,12 @@ Commit: `0ce54c8`
 
 ## Release Decision
 
-Release status for commit `0ce54c8`: `GO`
+Release status for the OpenClaw Manager candidate: `HOLD`
 
-Public release can proceed because:
+Public release is held until:
 
-- `npm run package:desktop:release` produces `AgentSecurity Setup.exe`
-- `releaseArtifacts.windowsInstaller` is recorded in live evidence with the EXE SHA256 and `signatureStatus: "Unsigned"`
-- `node scripts/validate-release-candidate.mjs --evidence docs\release-evidence-2026-04-29-live.json` passes
-- GitHub Release assets can be replaced with the EXE and `.sha256`
+- a real Ubuntu 24.04 LTS rootfs is bundled
+- the bundled bootstrap installs Node 24 and `openclaw@latest` inside that WSL2 distro
+- onboarding URL or launch guidance is verified
+- refreshed live evidence passes `scripts/validate-release-candidate.mjs`
 

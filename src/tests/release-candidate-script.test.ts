@@ -25,14 +25,17 @@ describe('release candidate validation script', () => {
     const assetRoot = join(dir, 'assets')
     const rootfsPath = join(assetRoot, 'agent-security-rootfs.tar')
     const agentPath = join(assetRoot, 'openclaw-agent.pkg')
+    const bootstrapPath = join(assetRoot, 'openclaw-bootstrap.sh')
     const installerPath = join(dir, 'AgentSecurity Setup.exe')
     const evidencePath = join(dir, 'valid-evidence.json')
     const rootfsContent = 'rootfs'
     const agentContent = 'agent'
+    const bootstrapContent = 'bootstrap'
     const installerContent = 'signed installer placeholder'
     await mkdir(assetRoot)
     await writeFile(rootfsPath, rootfsContent, 'utf8')
     await writeFile(agentPath, agentContent, 'utf8')
+    await writeFile(bootstrapPath, bootstrapContent, 'utf8')
     await writeFile(installerPath, installerContent, 'utf8')
 
     await writeFile(
@@ -49,13 +52,19 @@ describe('release candidate validation script', () => {
           bundledArtifacts: {
             rootfs: rootfsPath,
             agent: agentPath,
+            bootstrap: bootstrapPath,
             checksums: {
               rootfsSha256: createHash('sha256').update(rootfsContent).digest('hex'),
               agentSha256: createHash('sha256').update(agentContent).digest('hex'),
+              bootstrapSha256: createHash('sha256').update(bootstrapContent).digest('hex'),
             },
             version: '2026.04.28-rc1',
-            source: 'release-pipeline',
-            updatePolicy: 'bundled-only',
+            source: 'ubuntu-24.04-lts-official:test-rootfs',
+            updatePolicy: 'mostly-bundled',
+            ubuntuVersion: '24.04-lts',
+            nodeVersion: '24',
+            openClawInstallSource: 'npm',
+            openClawVersionPolicy: 'latest',
           },
           releaseArtifacts: {
             windowsInstaller: {
@@ -201,9 +210,14 @@ describe('release candidate validation script', () => {
       `${JSON.stringify(
         {
           version: '2026.04.28-rc1',
+          source: 'ubuntu-24.04-lts-official:test-rootfs',
           sourceCommit: 'abc123',
           agentName: 'OpenClaw',
-          updatePolicy: 'bundled-only',
+          ubuntuVersion: '24.04-lts',
+          nodeVersion: '24',
+          openClawInstallSource: 'npm',
+          openClawVersionPolicy: 'latest',
+          updatePolicy: 'mostly-bundled',
           artifacts: {
             rootfs: {
               path: 'bridge/assets/agent-security-rootfs.tar',
@@ -212,6 +226,10 @@ describe('release candidate validation script', () => {
             agentPackage: {
               path: 'bridge/assets/openclaw-agent.pkg',
               sha256: createHash('sha256').update(agentContent).digest('hex'),
+            },
+            bootstrap: {
+              path: 'bridge/assets/openclaw-bootstrap.sh',
+              sha256: createHash('sha256').update(bootstrapContent).digest('hex'),
             },
           },
         },

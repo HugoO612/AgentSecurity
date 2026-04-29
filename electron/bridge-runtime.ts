@@ -9,6 +9,10 @@ type ReleaseAssetManifest = {
   agentName?: string
   packageFormat?: string
   updatePolicy?: string
+  ubuntuVersion?: string
+  nodeVersion?: string
+  openClawInstallSource?: string
+  openClawVersionPolicy?: string
   artifacts?: {
     rootfs?: {
       path: string
@@ -19,6 +23,10 @@ type ReleaseAssetManifest = {
       sha256: string
     }
     agent?: {
+      path: string
+      sha256: string
+    }
+    bootstrap?: {
       path: string
       sha256: string
     }
@@ -33,6 +41,7 @@ export type DesktopPaths = {
   manifestPath: string
   rootfsPath: string
   agentPackagePath: string
+  bootstrapPath: string
 }
 
 export type BridgeAssetContext = {
@@ -40,6 +49,9 @@ export type BridgeAssetContext = {
   agentName: string
   agentChecksum: string
   rootfsChecksum: string
+  bootstrapChecksum: string
+  ubuntuVersion: string
+  nodeVersion: string
 }
 
 export function resolveDesktopPaths(input: {
@@ -56,6 +68,7 @@ export function resolveDesktopPaths(input: {
         manifestPath: join(input.resourcesPath, 'bridge-assets', 'release-assets-manifest.json'),
         rootfsPath: join(input.resourcesPath, 'bridge-assets', 'agent-security-rootfs.tar'),
         agentPackagePath: join(input.resourcesPath, 'bridge-assets', 'openclaw-agent.pkg'),
+        bootstrapPath: join(input.resourcesPath, 'bridge-assets', 'openclaw-bootstrap.sh'),
       }
     : {
         rendererUrl: input.rendererDevUrl ?? 'http://127.0.0.1:5173',
@@ -64,6 +77,7 @@ export function resolveDesktopPaths(input: {
         manifestPath: resolve(input.appRoot, 'bridge', 'assets', 'release-assets-manifest.json'),
         rootfsPath: resolve(input.appRoot, 'bridge', 'assets', 'agent-security-rootfs.tar'),
         agentPackagePath: resolve(input.appRoot, 'bridge', 'assets', 'openclaw-agent.pkg'),
+        bootstrapPath: resolve(input.appRoot, 'bridge', 'assets', 'openclaw-bootstrap.sh'),
       }
 }
 
@@ -81,12 +95,18 @@ export async function readBridgeAssetContext(
   if (!agentArtifact?.sha256) {
     throw new Error('Release asset manifest is missing bundled agent package SHA256.')
   }
+  if (!manifest.artifacts?.bootstrap?.sha256) {
+    throw new Error('Release asset manifest is missing OpenClaw bootstrap SHA256.')
+  }
 
   return {
     manifest,
     agentName: manifest.agentName ?? 'OpenClaw',
     agentChecksum: agentArtifact.sha256,
     rootfsChecksum: manifest.artifacts.rootfs.sha256,
+    bootstrapChecksum: manifest.artifacts.bootstrap.sha256,
+    ubuntuVersion: manifest.ubuntuVersion ?? '24.04-lts',
+    nodeVersion: manifest.nodeVersion ?? '24',
   }
 }
 
@@ -95,7 +115,7 @@ export function buildBridgeEnvironment(input: {
   token: string
   port: number
   allowedOrigins: string[]
-  paths: Pick<DesktopPaths, 'rootfsPath' | 'agentPackagePath'>
+  paths: Pick<DesktopPaths, 'rootfsPath' | 'agentPackagePath' | 'bootstrapPath'>
   assets: BridgeAssetContext
   baseEnv?: NodeJS.ProcessEnv
 }): NodeJS.ProcessEnv {
@@ -107,10 +127,16 @@ export function buildBridgeEnvironment(input: {
     AGENT_SECURITY_ALLOWED_ORIGINS: input.allowedOrigins.join(','),
     AGENT_SECURITY_BUNDLED_ROOTFS_PATH: input.paths.rootfsPath,
     AGENT_SECURITY_BUNDLED_AGENT_PATH: input.paths.agentPackagePath,
+    AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH: input.paths.bootstrapPath,
     AGENT_SECURITY_AGENT_INSTALL_URL: 'bundled://openclaw-agent.pkg',
     AGENT_SECURITY_ROOTFS_SHA256: input.assets.rootfsChecksum,
     AGENT_SECURITY_AGENT_INSTALL_SHA256: input.assets.agentChecksum,
+    AGENT_SECURITY_BOOTSTRAP_SHA256: input.assets.bootstrapChecksum,
     AGENT_SECURITY_AGENT_NAME: input.assets.agentName,
+    AGENT_SECURITY_UBUNTU_VERSION: input.assets.ubuntuVersion,
+    AGENT_SECURITY_NODE_VERSION: input.assets.nodeVersion,
+    AGENT_SECURITY_OPENCLAW_INSTALL_SOURCE: 'npm',
+    AGENT_SECURITY_OPENCLAW_VERSION_POLICY: 'latest',
   }
 }
 

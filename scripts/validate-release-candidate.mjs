@@ -49,6 +49,7 @@ const assetRoot = process.env.AGENT_SECURITY_RELEASE_ASSET_ROOT || 'bridge/asset
 const requiredAssetPaths = {
   rootfs: resolve(assetRoot, 'agent-security-rootfs.tar'),
   agent: resolve(assetRoot, 'openclaw-agent.pkg'),
+  bootstrap: resolve(assetRoot, 'openclaw-bootstrap.sh'),
 }
 const sha256Pattern = /^[0-9a-f]{64}$/i
 const placeholderValues = new Set(['REPLACE_ME', 'NOT_VALIDATED', 'missing', ''])
@@ -114,11 +115,12 @@ async function validateReleaseEvidence(evidence, manifest) {
     throw new Error('targetDistro must be "AgentSecurity" for public launch evidence.')
   }
 
-  if (!evidence.bundledArtifacts?.rootfs || !evidence.bundledArtifacts?.agent) {
-    throw new Error('bundledArtifacts.rootfs and bundledArtifacts.agent are required.')
+  if (!evidence.bundledArtifacts?.rootfs || !evidence.bundledArtifacts?.agent || !evidence.bundledArtifacts?.bootstrap) {
+    throw new Error('bundledArtifacts.rootfs, bundledArtifacts.agent, and bundledArtifacts.bootstrap are required.')
   }
   validateBundledAssetPath('rootfs', evidence.bundledArtifacts.rootfs)
   validateBundledAssetPath('agent', evidence.bundledArtifacts.agent)
+  validateBundledAssetPath('bootstrap', evidence.bundledArtifacts.bootstrap)
 
   const rootfsChecksum =
     evidence.bundledArtifacts.checksums?.rootfsSha256 ??
@@ -127,12 +129,17 @@ async function validateReleaseEvidence(evidence, manifest) {
     evidence.bundledArtifacts.checksums?.agentSha256 ??
     evidence.bundledArtifacts.agentSha256 ??
     evidence.bundledArtifacts.checksum
+  const bootstrapChecksum =
+    evidence.bundledArtifacts.checksums?.bootstrapSha256 ??
+    evidence.bundledArtifacts.bootstrapSha256
 
   validateSha256('bundledArtifacts.checksums.rootfsSha256', rootfsChecksum)
   validateSha256('bundledArtifacts.checksums.agentSha256', agentChecksum)
+  validateSha256('bundledArtifacts.checksums.bootstrapSha256', bootstrapChecksum)
   await validateAssetChecksum('rootfs', rootfsChecksum)
   await validateAssetChecksum('agent', agentChecksum)
-  validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecksum)
+  await validateAssetChecksum('bootstrap', bootstrapChecksum)
+  validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecksum, bootstrapChecksum)
   await validateWindowsInstaller(evidence)
 
   if (!isRealValue(evidence.candidateVersion)) {
@@ -147,8 +154,23 @@ async function validateReleaseEvidence(evidence, manifest) {
   if (!isRealValue(evidence.bundledArtifacts?.source)) {
     throw new Error('bundledArtifacts.source is required.')
   }
-  if (evidence.bundledArtifacts?.updatePolicy !== 'bundled-only') {
-    throw new Error('bundledArtifacts.updatePolicy must be "bundled-only".')
+  if (evidence.bundledArtifacts?.updatePolicy !== 'mostly-bundled') {
+    throw new Error('bundledArtifacts.updatePolicy must be "mostly-bundled".')
+  }
+  if (!isUbuntu2404RootfsSource(evidence.bundledArtifacts?.source)) {
+    throw new Error('bundledArtifacts.source must identify a real Ubuntu 24.04 LTS rootfs, not a development placeholder.')
+  }
+  if (evidence.bundledArtifacts?.ubuntuVersion !== '24.04-lts') {
+    throw new Error('bundledArtifacts.ubuntuVersion must be "24.04-lts".')
+  }
+  if (evidence.bundledArtifacts?.nodeVersion !== '24') {
+    throw new Error('bundledArtifacts.nodeVersion must be "24".')
+  }
+  if (evidence.bundledArtifacts?.openClawInstallSource !== 'npm') {
+    throw new Error('bundledArtifacts.openClawInstallSource must be "npm".')
+  }
+  if (evidence.bundledArtifacts?.openClawVersionPolicy !== 'latest') {
+    throw new Error('bundledArtifacts.openClawVersionPolicy must be "latest".')
   }
 
   if (Array.isArray(evidence.shimmedCommands) && evidence.shimmedCommands.length > 0) {
@@ -257,7 +279,7 @@ function validateExceptionMatrix(evidence) {
   }
 }
 
-function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecksum) {
+function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecksum, bootstrapChecksum) {
   const agentArtifact = manifest.artifacts?.agentPackage ?? manifest.artifacts?.agent
   if (!manifest) {
     throw new Error('release-assets-manifest.json is required for public launch evidence.')
@@ -270,8 +292,23 @@ function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecks
   if (manifest.version !== evidence.bundledArtifacts.version) {
     throw new Error('Asset manifest version must match bundledArtifacts.version.')
   }
-  if (manifest.updatePolicy !== 'bundled-only') {
-    throw new Error('Asset manifest updatePolicy must be "bundled-only".')
+  if (manifest.updatePolicy !== 'mostly-bundled') {
+    throw new Error('Asset manifest updatePolicy must be "mostly-bundled".')
+  }
+  if (!isUbuntu2404RootfsSource(manifest.source)) {
+    throw new Error('Asset manifest source must identify a real Ubuntu 24.04 LTS rootfs, not a development placeholder.')
+  }
+  if (manifest.ubuntuVersion !== '24.04-lts') {
+    throw new Error('Asset manifest ubuntuVersion must be "24.04-lts".')
+  }
+  if (manifest.nodeVersion !== '24') {
+    throw new Error('Asset manifest nodeVersion must be "24".')
+  }
+  if (manifest.openClawInstallSource !== 'npm') {
+    throw new Error('Asset manifest openClawInstallSource must be "npm".')
+  }
+  if (manifest.openClawVersionPolicy !== 'latest') {
+    throw new Error('Asset manifest openClawVersionPolicy must be "latest".')
   }
   if (manifest.artifacts?.rootfs?.path !== 'bridge/assets/agent-security-rootfs.tar') {
     throw new Error('Asset manifest rootfs path must be fixed.')
@@ -282,16 +319,31 @@ function validateManifestBinding(evidence, manifest, rootfsChecksum, agentChecks
   if (manifest.agentName !== 'OpenClaw') {
     throw new Error('Asset manifest agentName must be "OpenClaw" for the public Windows release.')
   }
+  if (manifest.artifacts?.bootstrap?.path !== 'bridge/assets/openclaw-bootstrap.sh') {
+    throw new Error('Asset manifest bootstrap path must be fixed.')
+  }
   if (manifest.artifacts?.rootfs?.sha256 !== rootfsChecksum.toLowerCase()) {
     throw new Error('Asset manifest rootfs checksum must match evidence.')
   }
   if (agentArtifact?.sha256 !== agentChecksum.toLowerCase()) {
     throw new Error('Asset manifest agent checksum must match evidence.')
   }
+  if (manifest.artifacts?.bootstrap?.sha256 !== bootstrapChecksum.toLowerCase()) {
+    throw new Error('Asset manifest bootstrap checksum must match evidence.')
+  }
 }
 
 function isRealValue(value) {
   return typeof value === 'string' && !placeholderValues.has(value.trim())
+}
+
+function isUbuntu2404RootfsSource(value) {
+  return (
+    isRealValue(value) &&
+    value.includes('ubuntu-24.04-lts') &&
+    !value.includes('dev-busybox-placeholder') &&
+    !value.includes('busybox')
+  )
 }
 
 function validateBundledAssetPath(kind, value) {

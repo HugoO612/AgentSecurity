@@ -9,13 +9,19 @@
   "bundledArtifacts": {
     "rootfs": "bridge/assets/agent-security-rootfs.tar",
     "agent": "bridge/assets/openclaw-agent.pkg",
+    "bootstrap": "bridge/assets/openclaw-bootstrap.sh",
     "checksums": {
       "rootfsSha256": "REPLACE_ME",
-      "agentSha256": "REPLACE_ME"
+      "agentSha256": "REPLACE_ME",
+      "bootstrapSha256": "REPLACE_ME"
     },
     "version": "REPLACE_ME",
     "source": "REPLACE_ME",
-    "updatePolicy": "bundled-only"
+    "updatePolicy": "mostly-bundled",
+    "ubuntuVersion": "24.04-lts",
+    "nodeVersion": "24",
+    "openClawInstallSource": "npm",
+    "openClawVersionPolicy": "latest"
   },
   "releaseArtifacts": {
     "windowsInstaller": {

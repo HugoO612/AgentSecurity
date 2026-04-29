@@ -34,6 +34,13 @@ export type BridgeConfig = {
   bundledRootfsPath: string
   bundledAgentArtifactPath: string
   bundledAgentName: string
+  ubuntuVersion: string
+  nodeVersion: string
+  openClawInstallSource: 'npm'
+  openClawVersionPolicy: 'latest'
+  openClawPackageName: string
+  bundledBootstrapPath: string
+  bundledBootstrapChecksum: string
 }
 
 export function createBridgeConfig(): BridgeConfig {
@@ -94,6 +101,17 @@ export function createBridgeConfig(): BridgeConfig {
     process.env.AGENT_SECURITY_ROOTFS_SHA256?.trim() || 'dev-skip-checksum'
   const bundledAgentName =
     process.env.AGENT_SECURITY_AGENT_NAME?.trim() || 'OpenClaw'
+  const ubuntuVersion =
+    process.env.AGENT_SECURITY_UBUNTU_VERSION?.trim() || '24.04-lts'
+  const nodeVersion =
+    process.env.AGENT_SECURITY_NODE_VERSION?.trim() || '24'
+  const openClawPackageName =
+    process.env.AGENT_SECURITY_OPENCLAW_PACKAGE?.trim() || 'openclaw'
+  const bundledBootstrapPath =
+    process.env.AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH?.trim() ||
+    join(bridgeRoot, 'assets', 'openclaw-bootstrap.sh')
+  const bundledBootstrapChecksum =
+    process.env.AGENT_SECURITY_BOOTSTRAP_SHA256?.trim() || 'dev-skip-checksum'
 
   if (mode !== 'dev') {
     if (allowDevShim) {
@@ -114,11 +132,23 @@ export function createBridgeConfig(): BridgeConfig {
     if (!existsSync(bundledAgentArtifactPath)) {
       throw new Error('Bundled agent artifact is required outside dev mode.')
     }
+    if (!existsSync(bundledBootstrapPath)) {
+      throw new Error('Bundled OpenClaw bootstrap artifact is required outside dev mode.')
+    }
     if (!isSha256(installerChecksum)) {
       throw new Error('A real bundled agent artifact SHA256 is required outside dev mode.')
     }
     if (!isSha256(bundledRootfsChecksum)) {
       throw new Error('A real bundled rootfs SHA256 is required outside dev mode.')
+    }
+    if (!isSha256(bundledBootstrapChecksum)) {
+      throw new Error('A real bundled OpenClaw bootstrap SHA256 is required outside dev mode.')
+    }
+    if (ubuntuVersion !== '24.04-lts') {
+      throw new Error('Release modes only support Ubuntu 24.04 LTS rootfs.')
+    }
+    if (nodeVersion !== '24') {
+      throw new Error('Release modes only support Node 24 for OpenClaw.')
     }
   }
 
@@ -156,6 +186,13 @@ export function createBridgeConfig(): BridgeConfig {
     bundledRootfsPath,
     bundledAgentArtifactPath,
     bundledAgentName,
+    ubuntuVersion,
+    nodeVersion,
+    openClawInstallSource: 'npm',
+    openClawVersionPolicy: 'latest',
+    openClawPackageName,
+    bundledBootstrapPath,
+    bundledBootstrapChecksum,
   }
 }
 

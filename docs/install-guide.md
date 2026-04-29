@@ -6,7 +6,7 @@ This guide applies only to the formal Windows release path:
 - Windows only
 - WSL2 only
 - dedicated `AgentSecurity` distro only
-- bundled rootfs and bundled OpenClaw package only
+- bundled Ubuntu 24.04 LTS rootfs, bundled bootstrap, and npm-installed OpenClaw only
 
 The formal release does not:
 - install into the Windows host runtime
@@ -31,7 +31,7 @@ This is the default and recommended Windows install path for v1. It is not a dir
 4. If the app requests permission, approve the Windows administrator prompt.
 5. If Windows feature enablement requires a reboot, reboot the machine and reopen the app.
 6. Wait while the installer:
-   collects facts, enables WSL features when needed, creates the dedicated `AgentSecurity` distro, imports the bundled rootfs, stages the bundled OpenClaw package, verifies checksum, writes runtime config, starts OpenClaw, and runs health check.
+   collects facts, enables WSL features when needed, creates the dedicated `AgentSecurity` distro, imports the Ubuntu 24.04 LTS rootfs, verifies bundled bootstrap checksums, installs Node 24/npm support, runs `npm install -g openclaw@latest`, writes runtime config, starts OpenClaw, and runs health check.
 7. Review the final state and keep the support bundle available in case recovery is needed.
 
 ## What Installer Does
@@ -39,8 +39,8 @@ This is the default and recommended Windows install path for v1. It is not a dir
 - Collects system facts.
 - Enables required features when needed.
 - Automatically prepares the dedicated `AgentSecurity` distro when missing.
-- Imports the bundled rootfs.
-- Installs the bundled OpenClaw package and writes runtime config.
+- Imports the bundled Ubuntu 24.04 LTS rootfs.
+- Runs the bundled bootstrap to prepare Node 24/npm and install OpenClaw from npm latest.
 - Starts the runtime and runs initial health check.
 - Emits install summary and reports.
 

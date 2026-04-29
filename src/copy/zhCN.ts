@@ -58,6 +58,7 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_BTN_VIEW_FIX_INSTRUCTIONS: '查看修复方法',
   COPY_BTN_COPY_DIAGNOSTICS: '复制诊断摘要',
   COPY_BTN_REFRESH_SNAPSHOT: '刷新状态',
+  COPY_BTN_OPEN_ONBOARDING: '打开 OpenClaw 引导',
   COPY_BTN_CONFIRM_REBUILD: '重建',
   COPY_BTN_CONFIRM_DELETE: '删除环境',
   COPY_CONFIRM_PERMISSION_BODY:
@@ -96,6 +97,8 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_LABEL_FAILURE_INFO: '失败信息',
   COPY_LABEL_DIAGNOSTICS: '诊断摘要',
   COPY_LABEL_RECOMMENDED_NEXT: '推荐下一步',
+  COPY_LABEL_OPENCLAW_RUNTIME: 'OpenClaw 运行时',
+  COPY_LABEL_ONBOARDING: '初始配置',
   COPY_HINT_PERMISSION_PROMPT: '系统可能会请求一次必要权限。',
   COPY_HINT_REBUILD_IMPACT: '会清空当前隔离环境中的内容，但不会把 OpenClaw 切到 Windows 主环境运行。',
   COPY_HINT_DELETE_IMPACT: '会删除隔离环境及其中内容，之后需要重新安装才能继续本机运行。',
@@ -134,6 +137,7 @@ export const zhCN: Record<CopyKey, string> = {
   COPY_NOTICE_BRIDGE_FALLBACK:
     '当前无法连接本地安全组件，请先恢复本地 bridge 连接后再继续。',
   COPY_NOTICE_DIAGNOSTICS_COPIED: '诊断摘要已复制。',
+  COPY_NOTICE_ONBOARDING_COPIED: 'OpenClaw 引导地址已复制。',
   COPY_DEBUG_SCENARIO_TITLE: '场景模板',
   COPY_STEP_CHECK: '检查系统能力',
   COPY_STEP_CREATE: '创建隔离环境',

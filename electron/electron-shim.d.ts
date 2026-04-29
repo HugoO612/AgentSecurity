@@ -41,4 +41,19 @@ declare module 'electron' {
   export const contextBridge: {
     exposeInMainWorld(apiKey: string, api: unknown): void
   }
+
+  export const ipcMain: {
+    handle(
+      channel: string,
+      listener: (event: unknown, ...args: unknown[]) => Promise<unknown> | unknown,
+    ): void
+  }
+
+  export const ipcRenderer: {
+    invoke(channel: string, ...args: unknown[]): Promise<unknown>
+  }
+
+  export const shell: {
+    openExternal(url: string): Promise<void>
+  }
 }

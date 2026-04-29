@@ -7,15 +7,26 @@ import { promisify } from 'node:util'
 const execFileAsync = promisify(execFile)
 
 const version = process.argv[2] ?? new Date().toISOString().slice(0, 10).replaceAll('-', '.')
-const sourceCommit = await git(['rev-parse', '--short', 'HEAD']).catch(() => 'unknown')
+const sourceCommit =
+  process.env.AGENT_SECURITY_SOURCE_COMMIT?.trim() ||
+  (await git(['rev-parse', '--short', 'HEAD']).catch(() => 'unknown'))
 const assetDir = resolve('bridge/assets')
 const rootfsPath = resolve(assetDir, 'agent-security-rootfs.tar')
 const agentPath = resolve(assetDir, 'openclaw-agent.pkg')
+const bootstrapPath = resolve(assetDir, 'openclaw-bootstrap.sh')
 const manifestPath = resolve(assetDir, 'release-assets-manifest.json')
+const ubuntuRootfsUrl =
+  process.env.AGENT_SECURITY_UBUNTU_ROOTFS_URL?.trim() ||
+  'https://cloud-images.ubuntu.com/wsl/releases/24.04/current/ubuntu-noble-wsl-amd64-24.04lts.rootfs.tar.gz'
 const bundledOpenClawPath =
   process.env.AGENT_SECURITY_OPENCLAW_PAYLOAD_PATH?.trim()
     ? resolve(process.env.AGENT_SECURITY_OPENCLAW_PAYLOAD_PATH.trim())
     : null
+const providedUbuntuRootfsPath =
+  process.env.AGENT_SECURITY_UBUNTU_ROOTFS_PATH?.trim()
+    ? resolve(process.env.AGENT_SECURITY_UBUNTU_ROOTFS_PATH.trim())
+    : null
+const shouldDownloadUbuntuRootfs = process.env.AGENT_SECURITY_DOWNLOAD_UBUNTU_ROOTFS === '1'
 
 await mkdir(assetDir, { recursive: true })
 await mkdir(resolve('.tmp'), { recursive: true })
@@ -162,19 +173,26 @@ if (bundledOpenClawPath) {
   }
 }
 
-const [rootfsSha256, agentSha256] = await Promise.all([
+const rootfsSource = await resolveUbuntuRootfsSource()
+
+const [rootfsSha256, agentSha256, bootstrapSha256] = await Promise.all([
   sha256(rootfsPath),
   sha256(agentPath),
+  sha256(bootstrapPath),
 ])
 
 const manifest = {
   version,
   generatedAt: new Date().toISOString(),
-  source: 'scripts/build-release-assets.mjs using WSL Ubuntu static busybox',
+  source: rootfsSource,
   sourceCommit,
   agentName: 'OpenClaw',
+  ubuntuVersion: '24.04-lts',
+  nodeVersion: '24',
+  openClawInstallSource: 'npm',
+  openClawVersionPolicy: 'latest',
   packageFormat: 'agent-security-tar-pkg-v1',
-  updatePolicy: 'bundled-only',
+  updatePolicy: 'mostly-bundled',
   artifacts: {
     rootfs: {
       path: 'bridge/assets/agent-security-rootfs.tar',
@@ -183,6 +201,10 @@ const manifest = {
     agentPackage: {
       path: 'bridge/assets/openclaw-agent.pkg',
       sha256: agentSha256,
+    },
+    bootstrap: {
+      path: 'bridge/assets/openclaw-bootstrap.sh',
+      sha256: bootstrapSha256,
     },
   },
 }
@@ -193,6 +215,29 @@ process.stdout.write(`${JSON.stringify(manifest, null, 2)}\n`)
 
 async function sha256(path) {
   return createHash('sha256').update(await readFile(path)).digest('hex')
+}
+
+async function resolveUbuntuRootfsSource() {
+  if (providedUbuntuRootfsPath) {
+    await copyFileCompat(providedUbuntuRootfsPath, rootfsPath)
+    return 'ubuntu-24.04-lts-provided-rootfs'
+  }
+
+  if (shouldDownloadUbuntuRootfs) {
+    await downloadFile(ubuntuRootfsUrl, rootfsPath)
+    return `ubuntu-24.04-lts-official:${ubuntuRootfsUrl}`
+  }
+
+  return 'dev-busybox-placeholder'
+}
+
+async function downloadFile(url, target) {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to download Ubuntu rootfs from ${url}: ${response.status} ${response.statusText}`)
+  }
+  const bytes = Buffer.from(await response.arrayBuffer())
+  await writeFile(target, bytes)
 }
 
 function windowsPathToWsl(path) {

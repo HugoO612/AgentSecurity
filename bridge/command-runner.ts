@@ -88,6 +88,9 @@ export type TemplateStage =
       | 'install_agent'
       | 'write_runtime_config'
       | 'health_check'
+      | 'verifying_bootstrap'
+      | 'installing_node'
+      | 'installing_openclaw'
       | 'stopping'
       | 'cleanup_environment'
       | 'deleting'
@@ -118,6 +121,11 @@ export type TemplateCommandInput = {
   bundledRootfsChecksum?: string
   bundledRootfsPath?: string
   bundledAgentArtifactPath?: string
+  bundledBootstrapPath?: string
+  bundledBootstrapChecksum?: string
+  ubuntuVersion?: string
+  nodeVersion?: string
+  openClawPackageName?: string
   elevationHelperCommand?: string
   allowDevShim?: boolean
   additionalSensitiveValues?: string[]
@@ -135,8 +143,14 @@ export type ResolvedExecutionContext = {
   bundledRootfsChecksum: string
   bundledRootfsPath: string
   bundledAgentArtifactPath: string
+  bundledBootstrapPath: string
+  bundledBootstrapChecksum: string
   stagedInstallerPath: string
   stagedRootfsPath: string
+  stagedBootstrapPath: string
+  ubuntuVersion: string
+  nodeVersion: string
+  openClawPackageName: string
   elevationHelperCommand: string
   allowDevShim: boolean
 }
@@ -367,7 +381,7 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     buildInvocation: (context) => buildStageArtifactsInvocation(context),
   },
   verify_checksum: {
-    stage: 'verify_checksum',
+    stage: 'verifying_bootstrap',
     failureStage: 'agent_install',
     failureType: 'command_failed',
     defaultFailureCode: 'artifact_invalid',
@@ -376,7 +390,7 @@ const TEMPLATE_SPECS: Record<TemplateCommandId, TemplateSpec> = {
     buildInvocation: (context) => buildVerifyChecksumInvocation(context),
   },
   install_agent: {
-    stage: 'install_agent',
+    stage: 'installing_openclaw',
     failureStage: 'agent_install',
     failureType: 'command_failed',
     defaultFailureCode: 'agent_install_failed',
@@ -644,8 +658,15 @@ function resolveTemplateContext(input: TemplateCommandInput): ResolvedExecutionC
       input.bundledRootfsPath ?? 'C:\\AgentSecurity\\bundled\\agent-security-rootfs.tar',
     bundledAgentArtifactPath:
       input.bundledAgentArtifactPath ?? 'C:\\AgentSecurity\\bundled\\openclaw-agent.pkg',
+    bundledBootstrapPath:
+      input.bundledBootstrapPath ?? 'C:\\AgentSecurity\\bundled\\openclaw-bootstrap.sh',
+    bundledBootstrapChecksum: input.bundledBootstrapChecksum ?? 'dev-skip-checksum',
     stagedInstallerPath: `${runtimeDir}\\staged-agent.pkg`,
     stagedRootfsPath: `${runtimeDir}\\staged-rootfs.tar`,
+    stagedBootstrapPath: `${runtimeDir}\\openclaw-bootstrap.sh`,
+    ubuntuVersion: input.ubuntuVersion ?? '24.04-lts',
+    nodeVersion: input.nodeVersion ?? '24',
+    openClawPackageName: input.openClawPackageName ?? 'openclaw',
     elevationHelperCommand:
       input.elevationHelperCommand ??
       '',
@@ -668,8 +689,11 @@ function collectSensitiveValues(
     context.bundledRootfsChecksum,
     context.bundledRootfsPath,
     context.bundledAgentArtifactPath,
+    context.bundledBootstrapPath,
+    context.bundledBootstrapChecksum,
     context.stagedInstallerPath,
     context.stagedRootfsPath,
+    context.stagedBootstrapPath,
     ...(input.additionalSensitiveValues ?? []),
   ].filter(Boolean)
 }

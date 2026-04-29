@@ -35,6 +35,13 @@ const baseConfig: BridgeConfig = {
   bundledRootfsPath: 'C:\\AgentSecurity\\bundled\\agent-security-rootfs.tar',
   bundledAgentArtifactPath: 'C:\\AgentSecurity\\bundled\\openclaw-agent.pkg',
   bundledAgentName: 'OpenClaw',
+  ubuntuVersion: '24.04-lts',
+  nodeVersion: '24',
+  openClawInstallSource: 'npm',
+  openClawVersionPolicy: 'latest',
+  openClawPackageName: 'openclaw',
+  bundledBootstrapPath: 'C:\\AgentSecurity\\bundled\\openclaw-bootstrap.sh',
+  bundledBootstrapChecksum: 'fedcba9876543210',
 }
 
 afterEach(() => {
@@ -72,7 +79,8 @@ describe('bridge action planning', () => {
       if (joined.includes('sha256=')) {
         return {
           exitCode: 0,
-          stdout: 'sha256=0123456789abcdef',
+          stdout:
+            'sha256=0123456789abcdef\nrootfsSha256=abcdef0123456789\nbootstrapSha256=fedcba9876543210',
           stderr: '',
         }
       }
@@ -179,7 +187,8 @@ describe('bridge action planning', () => {
       if (joined.includes('sha256=')) {
         return {
           exitCode: 0,
-          stdout: 'sha256=0123456789abcdef',
+          stdout:
+            'sha256=0123456789abcdef\nrootfsSha256=abcdef0123456789\nbootstrapSha256=fedcba9876543210',
           stderr: '',
         }
       }

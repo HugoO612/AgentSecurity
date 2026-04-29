@@ -73,17 +73,22 @@ describe('bridge config', () => {
     const root = await mkdtemp(join(tmpdir(), 'agent-security-config-'))
     const rootfs = join(root, 'agent-security-rootfs.tar')
     const agent = join(root, 'openclaw-agent.pkg')
+    const bootstrap = join(root, 'openclaw-bootstrap.sh')
     await writeFile(rootfs, 'rootfs', 'utf8')
     await writeFile(agent, 'agent', 'utf8')
+    await writeFile(bootstrap, 'bootstrap', 'utf8')
 
     process.env.AGENT_SECURITY_MODE = 'production'
     process.env.AGENT_SECURITY_BRIDGE_TOKEN = 'token'
     process.env.AGENT_SECURITY_BUNDLED_ROOTFS_PATH = rootfs
     process.env.AGENT_SECURITY_BUNDLED_AGENT_PATH = agent
+    process.env.AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH = bootstrap
     process.env.AGENT_SECURITY_ROOTFS_SHA256 =
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
     process.env.AGENT_SECURITY_AGENT_INSTALL_SHA256 =
       'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789'
+    process.env.AGENT_SECURITY_BOOTSTRAP_SHA256 =
+      'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210'
 
     const { createBridgeConfig } = await import('../../bridge/config.ts')
     const config = createBridgeConfig()
@@ -95,6 +100,10 @@ describe('bridge config', () => {
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
     )
     expect(config.bundledAgentName).toBe('OpenClaw')
+    expect(config.ubuntuVersion).toBe('24.04-lts')
+    expect(config.nodeVersion).toBe('24')
+    expect(config.openClawInstallSource).toBe('npm')
+    expect(config.openClawVersionPolicy).toBe('latest')
 
     await rm(root, { recursive: true, force: true })
   })

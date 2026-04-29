@@ -9,6 +9,12 @@ import { useUiState } from '../../ui/ui-store'
 import { useNavigate } from 'react-router-dom'
 import type { EnvironmentAction } from '../../domain/types'
 
+type DesktopWindow = Window & {
+  __AGENT_SECURITY_DESKTOP__?: {
+    openExternal(url: string): Promise<unknown>
+  }
+}
+
 export function StatusPage() {
   const navigate = useNavigate()
   const { snapshot, state, derived, runAction, refreshSnapshot, exportSupportBundle } = useEnvironment()
@@ -111,6 +117,13 @@ export function StatusPage() {
             <h3>{snapshot.health.lastCheckedAt ? new Date(snapshot.health.lastCheckedAt).toLocaleString('zh-CN') : '尚无记录'}</h3>
             <p>{snapshot.health.status}</p>
           </div>
+          <div className="metric-card">
+            <p className="eyebrow">{copy('COPY_LABEL_OPENCLAW_RUNTIME')}</p>
+            <h3>{snapshot.runtime.agentName ?? 'OpenClaw'}</h3>
+            <p>
+              Ubuntu {snapshot.runtime.ubuntuVersion ?? '24.04 LTS'} / Node {snapshot.runtime.nodeVersion ?? '24'} / {snapshot.runtime.openClawVersionPolicy ?? 'latest'}
+            </p>
+          </div>
         </article>
 
         <article className="content-card">
@@ -118,6 +131,35 @@ export function StatusPage() {
           <h3>{snapshot.runtime.isolationBoundarySummary ?? '当前使用隔离环境运行。'}</h3>
           <p>{snapshot.runtime.windowsHostWritesSummary}</p>
           <p>Windows 主环境未被直接用于运行。</p>
+        </article>
+
+        <article className="content-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">{copy('COPY_LABEL_ONBOARDING')}</p>
+              <h3>{snapshot.runtime.onboardingUrl ?? 'OpenClaw onboard'}</h3>
+            </div>
+          </div>
+          <p>安装完成后，按 OpenClaw 官方引导完成模型和渠道配置。</p>
+          <div className="action-row">
+            <button
+              type="button"
+              className="primary-button"
+              disabled={!snapshot.runtime.onboardingUrl}
+              onClick={async () => {
+                if (!snapshot.runtime.onboardingUrl) {
+                  return
+                }
+                await (window as DesktopWindow).__AGENT_SECURITY_DESKTOP__?.openExternal(
+                  snapshot.runtime.onboardingUrl,
+                )
+                await navigator.clipboard.writeText(snapshot.runtime.onboardingUrl)
+                pushNotice(copy('COPY_NOTICE_ONBOARDING_COPIED'))
+              }}
+            >
+              {copy('COPY_BTN_OPEN_ONBOARDING')}
+            </button>
+          </div>
         </article>
 
         {snapshot.failure ? (

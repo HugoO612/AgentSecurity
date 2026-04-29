@@ -40,6 +40,10 @@ describe('desktop bootstrap helpers', () => {
           version: '2026.04.28-rc1',
           sourceCommit: 'abc123',
           agentName: 'OpenClaw',
+          ubuntuVersion: '24.04-lts',
+          nodeVersion: '24',
+          openClawInstallSource: 'npm',
+          openClawVersionPolicy: 'latest',
           artifacts: {
             rootfs: {
               path: 'bridge/assets/agent-security-rootfs.tar',
@@ -48,6 +52,10 @@ describe('desktop bootstrap helpers', () => {
             agentPackage: {
               path: 'bridge/assets/openclaw-agent.pkg',
               sha256: 'b'.repeat(64),
+            },
+            bootstrap: {
+              path: 'bridge/assets/openclaw-bootstrap.sh',
+              sha256: 'c'.repeat(64),
             },
           },
         }),
@@ -63,12 +71,17 @@ describe('desktop bootstrap helpers', () => {
         paths: {
           rootfsPath: 'C:\\assets\\agent-security-rootfs.tar',
           agentPackagePath: 'C:\\assets\\openclaw-agent.pkg',
+          bootstrapPath: 'C:\\assets\\openclaw-bootstrap.sh',
         },
         assets,
       })
 
       expect(env.AGENT_SECURITY_AGENT_INSTALL_URL).toBe('bundled://openclaw-agent.pkg')
       expect(env.AGENT_SECURITY_AGENT_NAME).toBe('OpenClaw')
+      expect(env.AGENT_SECURITY_BUNDLED_BOOTSTRAP_PATH).toBe('C:\\assets\\openclaw-bootstrap.sh')
+      expect(env.AGENT_SECURITY_BOOTSTRAP_SHA256).toBe('c'.repeat(64))
+      expect(env.AGENT_SECURITY_UBUNTU_VERSION).toBe('24.04-lts')
+      expect(env.AGENT_SECURITY_NODE_VERSION).toBe('24')
       expect(env.AGENT_SECURITY_ALLOWED_ORIGINS).toBe('null')
     } finally {
       await rm(root, { recursive: true, force: true })

@@ -33,6 +33,17 @@ export function createInitialSnapshot(
       distroName: config.targetDistro,
       agentName: config.bundledAgentName,
       agentVersion: '1.0.0',
+      ubuntuVersion: config.ubuntuVersion,
+      nodeVersion: config.nodeVersion,
+      openClawInstallSource: config.openClawInstallSource,
+      openClawVersionPolicy: config.openClawVersionPolicy,
+      wslAvailable: false,
+      distroPresent: false,
+      nodeInstalled: false,
+      openClawInstalled: false,
+      openClawRunning: false,
+      onboardingUrl: 'http://127.0.0.1:3000',
+      onboardingCommand: 'open OpenClaw onboarding after install',
       installationLocationSummary: `${config.bundledAgentName} 将安装到专用隔离环境 ${config.targetDistro} 中。`,
       windowsHostWritesSummary: `Windows 主环境只会写入受控目录：${config.dataRoot}、${config.runtimeDir}、${config.diagnosticsDir}。`,
       isolationBoundarySummary: `${config.bundledAgentName} 默认仅在 WSL2 专用隔离环境中运行，不直接跑在 Windows 主环境。`,
@@ -218,9 +229,11 @@ function buildArtifactStatus(
     .find((audit) => audit.stage === 'verify_checksum')
 
   return {
-    source: config.installerDownloadUrl.startsWith('bundled://')
-      ? ('bundled' as const)
-      : ('unknown' as const),
+    source: config.openClawInstallSource === 'npm'
+      ? ('unknown' as const)
+      : config.installerDownloadUrl.startsWith('bundled://')
+        ? ('bundled' as const)
+        : ('unknown' as const),
     checksumConfigured: config.installerChecksum !== 'dev-skip-checksum',
     checksumValidation:
       !verifyAudit
